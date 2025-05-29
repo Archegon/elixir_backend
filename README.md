@@ -70,7 +70,7 @@ cd plc-comm-test
 
 On Windows PowerShell:
 ```powershell
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
 ```
 Or with pipx:
 ```powershell

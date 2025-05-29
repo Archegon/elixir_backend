@@ -1,5 +1,7 @@
 import threading
 import time
+import os
+from dotenv import load_dotenv
 
 import snap7
 from snap7 import Area
@@ -22,8 +24,13 @@ class OutputType:
     DWORD = 4
 
 
+load_dotenv()
+
 class S7_200:
-    def __init__(self, ip, localtsap, remotetsap):
+    def __init__(self, ip=None, localtsap=None, remotetsap=None):
+        ip = ip or os.getenv("PLC_IP")
+        localtsap = localtsap or int(os.getenv("PLC_LOCALTSAP"), 16)
+        remotetsap = remotetsap or int(os.getenv("PLC_REMOTETSAP"), 16)
         self.plc = snap7.client.Client()
         self.plc.set_connection_type(3)
         self.plc.set_connection_params(ip, localtsap, remotetsap)
@@ -144,8 +151,6 @@ class S7_200:
         mem = self._translate_alias(mem).lower()
         data = self.getMem(mem, returnByte=True)
 
-        length = 1
-        out_type = None
         bit = 0
         start = 0
         db_number = 0
@@ -155,20 +160,16 @@ class S7_200:
             sub = mem.split(".")[1]
 
             if sub.startswith("dbx"):
-                out_type = OutputType.BOOL
                 start = int(sub[3:].split(".")[0])
                 bit = int(sub.split(".")[1])
                 set_bool(data, 0, bit, int(value))
             elif sub.startswith("dbb"):
-                out_type = OutputType.INT
                 start = int(sub[3:])
                 set_int(data, 0, value)
             elif sub.startswith("dbw"):
-                out_type = OutputType.INT
                 start = int(sub[3:])
                 set_int(data, 0, value)
             elif sub.startswith("dbd"):
-                out_type = OutputType.REAL
                 start = int(sub[3:])
                 set_real(data, 0, value)
             area = Area.DB
@@ -176,32 +177,25 @@ class S7_200:
             area = self._resolve_area(mem)
 
             if mem[1] == "x":
-                out_type = OutputType.BOOL
                 start = int(mem[2:].split(".")[0])
                 bit = int(mem.split(".")[1])
                 set_bool(data, 0, bit, int(value))
             elif mem[1] == "b":
-                out_type = OutputType.INT
                 start = int(mem[2:])
                 set_int(data, 0, value)
             elif mem[1] == "w":
-                out_type = OutputType.INT
                 start = int(mem[2:])
                 set_int(data, 0, value)
             elif mem[1] == "d":
                 start = int(mem[2:])
                 if mem.startswith("vd"):
-                    out_type = OutputType.REAL
                     set_real(data, 0, value)
                 else:
-                    out_type = OutputType.DWORD
                     set_dword(data, 0, value)
             elif mem.startswith(("aqw", "qw", "vw")):
-                out_type = OutputType.INT
                 start = int(mem[3:])
                 set_int(data, 0, value)
             elif mem.startswith("vd"):
-                out_type = OutputType.REAL
                 start = int(mem[2:])
                 set_real(data, 0, value)
 
@@ -215,4 +209,4 @@ class S7_200:
 
 
 if __name__ == "__main__":
-    plc = S7_200("192.168.2.1", 0x0100, 0x0200)
+    plc = S7_200()

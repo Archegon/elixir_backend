@@ -1,0 +1,312 @@
+{
+  "authentication": {
+    "show_password_screen": {
+      "address": "M12.4",
+      "comment": "Show the pw screen"
+    },
+    "proceed_password": {
+      "address": "M12.5",
+      "comment": "Proceed from pw screen"
+    },
+    "back_password": {
+      "address": "M12.6",
+      "comment": "Back from pw screen"
+    },
+    "password_input": {
+      "address": "VD654",
+      "comment": "PW input contents"
+    },
+    "proceed_status": {
+      "address": "M15.3",
+      "comment": "Activates if pw match"
+    },
+    "change_password_status": {
+      "address": "M15.4",
+      "comment": "Activates if pw match and admin"
+    },
+    "user_password": {
+      "address": "VD1516",
+      "comment": "Saved user pw"
+    },
+    "admin_password": {
+      "address": "VD1520",
+      "comment": "Saved admin pw"
+    }
+  },
+  "language": {
+    "language_switch": {
+      "address": "M28.0",
+      "comment": "Switch between Eng and Chin"
+    },
+    "english_active": {
+      "address": "V0.0",
+      "comment": "Activates when Eng shown"
+    },
+    "chinese_active": {
+      "address": "V0.1",
+      "comment": "Activates when Chin shown"
+    }
+  },
+  "control_panel": {
+    "shutdown_button": {
+      "address": "M1.6",
+      "comment": "Shut down button for Internal control panel"
+    },
+    "shutdown_status": {
+      "address": "M1.7",
+      "comment": "Shut down status"
+    },
+    "ac_state": {
+      "address": "M11.4",
+      "comment": "AC on/off state"
+    },
+    "ceiling_light_state": {
+      "address": "M13.5",
+      "comment": "Ceiling lights state"
+    },
+    "intercom_state": {
+      "address": "M14.3",
+      "comment": "Intercom state"
+    },
+    "door_light": {
+      "address": "M14.4",
+      "comment": "Door light state"
+    },
+    "reading_lights": {
+      "address": "M15.5",
+      "comment": "Reading lights state"
+    }
+  },
+  "pressure_control": {
+    "pressure_add_button": {
+      "address": "M1.4",
+      "comment": "Adds 10 to pressure"
+    },
+    "pressure_minus_button": {
+      "address": "M1.5",
+      "comment": "Minus 10 from pressure"
+    },
+    "pressure_setpoint": {
+      "address": "VD512",
+      "comment": "Pressure setpoint value"
+    },
+    "internal_pressure_1": {
+      "address": "VD504",
+      "comment": "Internal pressure sensor 1"
+    },
+    "internal_pressure_2": {
+      "address": "VD800",
+      "comment": "Internal pressure sensor 2"
+    }
+  },
+  "session_control": {
+    "start_session": {
+      "address": "M3.0",
+      "comment": "Starts session and pressurise"
+    },
+    "end_session": {
+      "address": "M3.1",
+      "comment": "Ends session and depressurise"
+    },
+    "equalise_state": {
+      "address": "M3.2",
+      "comment": "Pause/Equalise state"
+    },
+    "running_state": {
+      "address": "M3.3",
+      "comment": "Session running state"
+    },
+    "pressuring_state": {
+      "address": "M3.4",
+      "comment": "Pressuring state"
+    },
+    "stabilising_state": {
+      "address": "M3.5",
+      "comment": "Stabilising state"
+    },
+    "stop_state": {
+      "address": "M3.7",
+      "comment": "Stop state"
+    },
+    "depressurise_state": {
+      "address": "M6.0",
+      "comment": "Depressurise state (Previously M3.6)"
+    },
+    "depressurisation_confirm": {
+      "address": "M15.2",
+      "comment": "Confirm button on depressurisation prompt"
+    }
+  },
+  "operating_modes": {
+    "mode_rest": {
+      "address": "M4.0",
+      "comment": "Rest mode"
+    },
+    "mode_health": {
+      "address": "M4.1",
+      "comment": "Health mode"
+    },
+    "mode_professional": {
+      "address": "M4.2",
+      "comment": "Professional mode"
+    },
+    "mode_custom": {
+      "address": "M4.3",
+      "comment": "Custom mode"
+    },
+    "mode_o2_100": {
+      "address": "M4.4",
+      "comment": "100% O2 mode"
+    },
+    "mode_o2_120": {
+      "address": "M4.5",
+      "comment": "120 minute O2 mode"
+    },
+    "compression_beginner": {
+      "address": "M5.0",
+      "comment": "Beginner compression mode"
+    },
+    "compression_normal": {
+      "address": "M5.1",
+      "comment": "Normal compression mode"
+    },
+    "compression_fast": {
+      "address": "M5.2",
+      "comment": "Fast compression mode"
+    },
+    "continuous_o2_flag": {
+      "address": "M5.6",
+      "comment": "Continuous O2 delivery flag"
+    },
+    "intermittent_o2_flag": {
+      "address": "M15.0",
+      "comment": "Intermittent O2 delivery flag"
+    },
+    "set_duration": {
+      "address": "VD682",
+      "comment": "Sets duration of session (60 to 120 mins)"
+    }
+  },
+  "temperature_control": {
+    "ac_auto": {
+      "address": "M11.0",
+      "comment": "AC Fan Auto mode"
+    },
+    "ac_low": {
+      "address": "M11.1",
+      "comment": "AC Fan Low speed"
+    },
+    "ac_mid": {
+      "address": "M11.2",
+      "comment": "AC Fan Mid speed"
+    },
+    "ac_high": {
+      "address": "M11.3",
+      "comment": "AC Fan High speed"
+    },
+    "heating_cooling_toggle": {
+      "address": "M28.1",
+      "comment": "Toggle between Heating and Cooling"
+    },
+    "temperature_setpoint": {
+      "address": "VD900",
+      "comment": "Temperature setpoint value"
+    }
+  },
+  "sensors": {
+    "current_temperature": {
+      "address": "VD408",
+      "comment": "Current temperature reading"
+    },
+    "current_humidity": {
+      "address": "VD412",
+      "comment": "Current humidity reading"
+    },
+    "ambient_o2": {
+      "address": "VD420",
+      "comment": "Ambient oxygen level"
+    },
+    "ambient_o2_2": {
+      "address": "VD416",
+      "comment": "Secondary ambient oxygen level"
+    },
+    "ambient_o2_check_flag": {
+      "address": "M7.0",
+      "comment": "Activates when o2 >=23%"
+    }
+  },
+  "calibration": {
+    "pressure_sensor_calibration": {
+      "address": "M1.1",
+      "comment": "Pressure sensor calibration trigger"
+    },
+    "oxygen_sensor_calibration": {
+      "address": "M1.2",
+      "comment": "Oxygen sensor calibration trigger"
+    }
+  },
+  "manual_controls": {
+    "manual_mode": {
+      "address": "M14.0",
+      "comment": "Manual mode on/off"
+    },
+    "release_solenoid_manual": {
+      "address": "M13.4",
+      "comment": "Enables manual release solenoid"
+    },
+    "air_pump1_manual": {
+      "address": "M13.6",
+      "comment": "Pump 1 manual control"
+    },
+    "air_pump2_manual": {
+      "address": "M13.7",
+      "comment": "Pump 2 manual control"
+    },
+    "oxygen_supply1_manual": {
+      "address": "M14.1",
+      "comment": "Oxygen supply 1 manual control"
+    },
+    "oxygen_supply2_manual": {
+      "address": "M13.7",
+      "comment": "Oxygen supply 2 manual control"
+    },
+    "release_solenoid_set": {
+      "address": "VW82",
+      "comment": "Release solenoid setting (5530 to 27000)"
+    }
+  },
+  "timers": {
+    "total_seconds_counter": {
+      "address": "VD590",
+      "comment": "Total seconds counter"
+    },
+    "seconds_counter": {
+      "address": "VD594",
+      "comment": "Seconds counter"
+    },
+    "minute_counter": {
+      "address": "VD598",
+      "comment": "Minute counter"
+    },
+    "run_time_sec": {
+      "address": "VD690",
+      "comment": "Runtime seconds"
+    },
+    "run_time_min": {
+      "address": "VD694",
+      "comment": "Runtime minutes"
+    },
+    "run_times": {
+      "address": "VD1500",
+      "comment": "Total run times (Unconfirmed)"
+    },
+    "min2": {
+      "address": "VW44",
+      "comment": "Secondary minutes (Unconfirmed)"
+    },
+    "sec2": {
+      "address": "VW46",
+      "comment": "Secondary seconds (Unconfirmed)"
+    }
+  }
+} 

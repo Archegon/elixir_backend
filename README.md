@@ -62,7 +62,7 @@ The above setup is persistent across reboots and isolates PLC communication from
 After cloning the project:
 
 ```bash
-git clone https://github.com/your-repo/plc-comm-test.git
+git clone https://github.com/Archegon/Elixir_backend.git
 cd plc-comm-test
 ```
 

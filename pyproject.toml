@@ -1,19 +1,39 @@
 [project]
 name = "elixir-backend"
 version = "0.1.0"
-description = "Backend server for Elixir web app"
+description = "Backend API server for Elixir Hyperbaric Chamber System with S7-200 PLC Integration"
 authors = [
-    {name = "Archegon",email = "ng.ta.wei@outlook.com"}
+    {name = "Archegon", email = "ng.ta.wei@outlook.com"}
+]
+maintainers = [
+    {name = "O2genes Team", email = "support@o2genes.com"}
 ]
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.13"
+keywords = ["plc", "s7-200", "fastapi", "hyperbaric", "chamber", "api", "snap7"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: FastAPI",
+    "Topic :: Scientific/Engineering :: Medical Science Apps."
+]
 dependencies = [
     "python-snap7 (>=2.0.2,<3.0.0)",
     "fastapi (>=0.115.12,<0.116.0)",
     "uvicorn (>=0.34.2,<0.35.0)",
-    "python-dotenv (>=1.1.0,<2.0.0)"
+    "python-dotenv (>=1.1.0,<2.0.0)",
+    "toml (>=0.10.2,<0.11.0)"
 ]
 
+[project.urls]
+Homepage = "https://o2genes.com"
+Documentation = "http://localhost:8000/docs"
+Repository = "https://github.com/o2genes/elixir-backend"
+"Bug Tracker" = "https://github.com/o2genes/elixir-backend/issues"
+"API Documentation" = "http://localhost:8000/redoc"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -11,8 +11,8 @@ import sys
 # Add modules to path for import
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from modules.logger import setup_logger, get_logger, ContextLogger, log_performance
-from modules.plc import S7_200  # This will have logging built-in
+from core.logger import setup_logger, get_logger, ContextLogger, log_performance
+from plc.plc import S7_200  # This will have logging built-in
 import logging
 
 

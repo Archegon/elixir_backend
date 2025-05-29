@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, call, MagicMock
-from modules.plc import S7_200, OutputType
+from plc.plc import S7_200, OutputType
 from snap7 import Area
 import threading
 
@@ -8,8 +8,8 @@ import threading
 class TestS7200Connection:
     """Test suite for S7_200 connection functionality."""
     
-    @patch("modules.plc.snap7.client.Client")
-    @patch("modules.plc.os.getenv")
+    @patch("plc.plc.snap7.client.Client")
+    @patch("plc.plc.os.getenv")
     def test_init_with_explicit_params(self, mock_getenv, mock_client):
         """Test initialization with explicitly provided parameters."""
         # Arrange
@@ -29,8 +29,8 @@ class TestS7200Connection:
         # Environment variables should not be called when explicit params provided
         mock_getenv.assert_not_called()
 
-    @patch("modules.plc.snap7.client.Client")
-    @patch("modules.plc.os.getenv")
+    @patch("plc.plc.snap7.client.Client")
+    @patch("plc.plc.os.getenv")
     def test_init_with_env_variables(self, mock_getenv, mock_client):
         """Test initialization using environment variables."""
         # Arrange
@@ -51,7 +51,7 @@ class TestS7200Connection:
         mock_instance.set_connection_params.assert_called_once_with("192.168.1.50", 0x0200, 0x0300)
         mock_instance.connect.assert_called_once_with("192.168.1.50", 0, 0)
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_connection_failure(self, mock_client):
         """Test handling of connection failures."""
         # Arrange
@@ -66,7 +66,7 @@ class TestS7200Connection:
         mock_instance.connect.assert_called_once()
         assert plc.plc == mock_instance
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_successful_connection_message(self, mock_client):
         """Test successful connection prints correct message."""
         # Arrange
@@ -77,7 +77,7 @@ class TestS7200Connection:
         plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
         mock_instance.get_connected.assert_called_once()
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_disconnect(self, mock_client):
         """Test PLC disconnection."""
         # Arrange
@@ -98,6 +98,7 @@ class TestMemoryAddressTranslation:
     def test_translate_alias_m_memory(self):
         """Test translation of M-memory aliases."""
         plc = S7_200.__new__(S7_200)  # Create instance without calling __init__
+        plc.logger = MagicMock()  # Mock the logger
         
         # Test various M-memory formats
         assert plc._translate_alias("M1.0") == "VX1.0"
@@ -107,6 +108,7 @@ class TestMemoryAddressTranslation:
     def test_translate_alias_vd_memory(self):
         """Test translation of VD-memory aliases."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         assert plc._translate_alias("VD100") == "DB1.DBD100"
         assert plc._translate_alias("vd0") == "DB1.DBD0"
@@ -115,6 +117,7 @@ class TestMemoryAddressTranslation:
     def test_translate_alias_vw_memory(self):
         """Test translation of VW-memory aliases."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         assert plc._translate_alias("VW50") == "DB1.DBW50"
         assert plc._translate_alias("vw0") == "DB1.DBW0"
@@ -123,6 +126,7 @@ class TestMemoryAddressTranslation:
     def test_translate_alias_passthrough(self):
         """Test that non-aliased addresses pass through unchanged."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         test_addresses = ["DB1.DBX0.0", "QX0.1", "IX1.0", "VX10.5", "random_string"]
         for addr in test_addresses:
@@ -135,6 +139,7 @@ class TestMemoryAreaResolution:
     def test_resolve_area_db(self):
         """Test DB area resolution."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         assert plc._resolve_area("db1.dbx0.0") == Area.DB
         assert plc._resolve_area("DB10.DBW100") == Area.DB
@@ -142,6 +147,7 @@ class TestMemoryAreaResolution:
     def test_resolve_area_pe(self):
         """Test PE (Process Input) area resolution."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         assert plc._resolve_area("aiw0") == Area.PE
         assert plc._resolve_area("iw10") == Area.PE
@@ -151,6 +157,7 @@ class TestMemoryAreaResolution:
     def test_resolve_area_pa(self):
         """Test PA (Process Output) area resolution."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         assert plc._resolve_area("aqw0") == Area.PA
         assert plc._resolve_area("qw10") == Area.PA
@@ -160,6 +167,7 @@ class TestMemoryAreaResolution:
     def test_resolve_area_mk(self):
         """Test MK (Marker/Memory) area resolution."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         assert plc._resolve_area("vx0.0") == Area.MK
         assert plc._resolve_area("vw100") == Area.MK
@@ -169,6 +177,7 @@ class TestMemoryAreaResolution:
     def test_resolve_area_unknown(self):
         """Test error handling for unknown memory areas."""
         plc = S7_200.__new__(S7_200)
+        plc.logger = MagicMock()  # Mock the logger
         
         with pytest.raises(ValueError, match="Unknown memory area for 'unknown'"):
             plc._resolve_area("unknown")
@@ -180,7 +189,7 @@ class TestMemoryAreaResolution:
 class TestMemoryReading:
     """Test suite for memory reading functionality."""
     
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_get_mem_bool_vx_area(self, mock_client):
         """Test reading boolean values from VX area (not DB)."""
         # Arrange
@@ -188,7 +197,7 @@ class TestMemoryReading:
         mock_instance.get_connected.return_value = True
         mock_instance.read_area.return_value = bytearray([0x01])  # Bit pattern: 00000001
         
-        with patch("modules.plc.get_bool", return_value=True) as mock_get_bool:
+        with patch("plc.plc.get_bool", return_value=True) as mock_get_bool:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act
@@ -199,7 +208,7 @@ class TestMemoryReading:
             mock_get_bool.assert_called_once_with(bytearray([0x01]), 0, 0)
             assert result is True
 
-    @patch("modules.plc.snap7.client.Client") 
+    @patch("plc.plc.snap7.client.Client") 
     def test_get_mem_int_db_area(self, mock_client):
         """Test reading integer values from DB area."""
         # Arrange
@@ -207,7 +216,7 @@ class TestMemoryReading:
         mock_instance.get_connected.return_value = True
         mock_instance.read_area.return_value = bytearray([0x01, 0x00])  # 256 in big-endian
         
-        with patch("modules.plc.get_int", return_value=256) as mock_get_int:
+        with patch("plc.plc.get_int", return_value=256) as mock_get_int:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act
@@ -218,7 +227,7 @@ class TestMemoryReading:
             mock_get_int.assert_called_once_with(bytearray([0x01, 0x00]), 0)
             assert result == 256
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_get_mem_real_vd_area(self, mock_client):
         """Test reading real (float) values from VD area (translated to DB)."""
         # Arrange
@@ -226,7 +235,7 @@ class TestMemoryReading:
         mock_instance.get_connected.return_value = True
         mock_instance.read_area.return_value = bytearray([0x42, 0x28, 0x00, 0x00])  # 42.0 in IEEE 754
         
-        with patch("modules.plc.get_real", return_value=42.0) as mock_get_real:
+        with patch("plc.plc.get_real", return_value=42.0) as mock_get_real:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act - VD100 gets translated to DB1.DBD100
@@ -237,7 +246,7 @@ class TestMemoryReading:
             mock_get_real.assert_called_once_with(bytearray([0x42, 0x28, 0x00, 0x00]), 0)
             assert result == 42.0
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_get_mem_return_bytes(self, mock_client):
         """Test reading raw bytes when returnByte=True."""
         # Arrange
@@ -253,7 +262,7 @@ class TestMemoryReading:
         # Assert
         assert result == bytearray([0x01, 0x02, 0x03, 0x04])
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_get_mem_uses_lock(self, mock_client):
         """Test that getMem uses threading lock (indirect test)."""
         # Arrange
@@ -278,7 +287,7 @@ class TestMemoryReading:
 class TestMemoryWriting:
     """Test suite for memory writing functionality."""
     
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_write_mem_bool_vx_area(self, mock_client):
         """Test writing boolean values to VX area."""
         # Arrange
@@ -287,7 +296,7 @@ class TestMemoryWriting:
         mock_instance.read_area.return_value = bytearray([0x00])
         mock_instance.write_area.return_value = 0  # Success
         
-        with patch("modules.plc.set_bool") as mock_set_bool:
+        with patch("plc.plc.set_bool") as mock_set_bool:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act
@@ -299,7 +308,7 @@ class TestMemoryWriting:
             mock_instance.write_area.assert_called_once_with(Area.MK, 0, 0, bytearray([0x00]))
             assert result == 0
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_write_mem_int_db_area(self, mock_client):
         """Test writing integer values to DB area."""
         # Arrange
@@ -308,7 +317,7 @@ class TestMemoryWriting:
         mock_instance.read_area.return_value = bytearray([0x00, 0x00])
         mock_instance.write_area.return_value = 0
         
-        with patch("modules.plc.set_int") as mock_set_int:
+        with patch("plc.plc.set_int") as mock_set_int:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act
@@ -318,7 +327,7 @@ class TestMemoryWriting:
             mock_set_int.assert_called_once_with(bytearray([0x00, 0x00]), 0, 1234)
             mock_instance.write_area.assert_called_once_with(Area.DB, 1, 0, bytearray([0x00, 0x00]))
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_write_mem_real_db_area(self, mock_client):
         """Test writing real (float) values to DB area."""
         # Arrange
@@ -327,7 +336,7 @@ class TestMemoryWriting:
         mock_instance.read_area.return_value = bytearray([0x00, 0x00, 0x00, 0x00])
         mock_instance.write_area.return_value = 0
         
-        with patch("modules.plc.set_real") as mock_set_real:
+        with patch("plc.plc.set_real") as mock_set_real:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act
@@ -336,7 +345,7 @@ class TestMemoryWriting:
             # Assert
             mock_set_real.assert_called_once_with(bytearray([0x00, 0x00, 0x00, 0x00]), 0, 3.14159)
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_write_mem_with_time_delay(self, mock_client):
         """Test that writeMem includes proper time delay."""
         # Arrange
@@ -345,7 +354,7 @@ class TestMemoryWriting:
         mock_instance.read_area.return_value = bytearray([0x00])
         mock_instance.write_area.return_value = 0
         
-        with patch("modules.plc.time.sleep") as mock_sleep:
+        with patch("plc.plc.time.sleep") as mock_sleep:
             plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
             
             # Act
@@ -354,7 +363,7 @@ class TestMemoryWriting:
             # Assert
             mock_sleep.assert_called_once_with(0.05)
 
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_write_mem_uses_lock(self, mock_client):
         """Test that writeMem uses threading lock (indirect test)."""
         # Arrange
@@ -390,7 +399,7 @@ class TestParameterizedMemoryOperations:
         ("VW50", Area.DB, 1, 50, 2),  # VW gets translated to DB1.DBW
         ("VD100", Area.DB, 1, 100, 4), # VD gets translated to DB1.DBD
     ])
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_memory_address_parsing(self, mock_client, address, expected_area, expected_db, expected_start, expected_length):
         """Test that various memory addresses are parsed correctly."""
         # Arrange
@@ -408,23 +417,24 @@ class TestParameterizedMemoryOperations:
 
 
 class TestErrorHandling:
-    """Test suite for error handling and edge cases."""
+    """Test suite for error handling scenarios."""
     
     def test_resolve_area_invalid_address(self):
         """Test error handling for invalid memory addresses."""
         plc = S7_200.__new__(S7_200)
-        
+        plc.logger = MagicMock()  # Mock the logger
+
         # Test with an address that doesn't match any pattern
         with pytest.raises(ValueError, match="Unknown memory area"):
             plc._resolve_area("xyz123")
     
-    @patch("modules.plc.snap7.client.Client")
+    @patch("plc.plc.snap7.client.Client")
     def test_connection_with_invalid_env_vars(self, mock_client):
         """Test handling of invalid environment variables."""
         mock_instance = mock_client.return_value
         mock_instance.get_connected.return_value = True
         
-        with patch("modules.plc.os.getenv") as mock_getenv:
+        with patch("plc.plc.os.getenv") as mock_getenv:
             # Simulate missing environment variables
             mock_getenv.return_value = None
             

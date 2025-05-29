@@ -218,15 +218,8 @@ Add a new function to any category:
 ### Testing Changes
 
 1. Make the address change in `config/plc_addresses.json`
-2. Validate the configuration:
-   ```bash
-   python tools/config_manager.py --validate
-   ```
-3. Reload the API configuration:
-   ```bash
-   curl -X POST http://localhost:8000/api/config/reload
-   ```
-4. Test the affected API endpoints
+2. Restart the API server or call the reload endpoint: `POST /api/config/reload`
+3. Test the affected API endpoints
 
 ## 🔄 Hot Reloading
 
@@ -239,17 +232,16 @@ The system supports hot reloading of configuration changes:
 ## 🚨 Troubleshooting
 
 ### Configuration Not Loading
-- Check JSON syntax with: `python tools/config_manager.py --validate`
+- Check JSON syntax is valid
 - Ensure file path is correct
 - Check file permissions
 
 ### Address Not Found Errors
 - Verify the category and function names are correct
-- Use the search tool: `python tools/config_manager.py --search <address>`
 - Check for typos in the configuration file
 
 ### Duplicate Address Warnings
-- Run: `python tools/config_manager.py --duplicates`
+- Manually review the configuration file for duplicate addresses
 - Resolve conflicts by using unique addresses
 
 ### API Not Reflecting Changes

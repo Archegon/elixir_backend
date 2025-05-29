@@ -12,11 +12,13 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import time
 import os
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-# Import our routes
+# Import our routes and configuration
 from api.routes import router as api_router
-from modules.logger import setup_logger, ContextLogger
+from core.logger import setup_logger, ContextLogger
+from core.app_config import get_fastapi_config, get_root_response, get_health_response, get_version, get_name
 
 # Load environment variables
 load_dotenv()
@@ -24,14 +26,35 @@ load_dotenv()
 # Initialize logger
 logger = setup_logger("main")
 
-# Create FastAPI app
-app = FastAPI(
-    title="Elixir Backend API",
-    description="API for S7-200 PLC Integration with Elixir Hyperbaric Chamber System",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    app_name = get_name()
+    version = get_version()
+    
+    logger.info(f"Starting {app_name} v{version}")
+    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(f"PLC IP: {os.getenv('PLC_IP', 'not configured')}")
+    
+    yield
+    
+    # Shutdown
+    logger.info(f"Shutting down {app_name}")
+    
+    # Clean up PLC connections if needed
+    try:
+        from api.routes import plc_instance
+        if plc_instance:
+            plc_instance.disconnect()
+            logger.info("PLC connection closed")
+    except Exception as e:
+        logger.error(f"Error during PLC cleanup: {e}")
+
+# Get FastAPI configuration from centralized config
+fastapi_config = get_fastapi_config()
+
+# Create FastAPI app with centralized configuration and lifespan
+app = FastAPI(**fastapi_config, lifespan=lifespan)
 
 # Add middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -68,43 +91,19 @@ async def log_requests(request: Request, call_next):
 # Include API routes
 app.include_router(api_router, prefix="", tags=["api"])
 
-# Root endpoint
+# Root endpoint - uses centralized configuration
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
-    return {
-        "message": "Elixir Backend API",
-        "version": "1.0.0",
-        "status": "operational",
-        "docs": "/docs",
-        "redoc": "/redoc",
-        "endpoints": {
-            "authentication": "/api/auth/*",
-            "language": "/api/language/*",
-            "control": "/api/control/*",
-            "pressure": "/api/pressure/*",
-            "session": "/api/session/*",
-            "modes": "/api/modes/*",
-            "ac": "/api/ac/*",
-            "sensors": "/api/sensors/*",
-            "calibration": "/api/calibration/*",
-            "manual": "/api/manual/*",
-            "status": "/api/status/*",
-            "websockets": "/ws/*"
-        }
-    }
+    return get_root_response()
 
-# Health check endpoint
+# Health check endpoint - uses centralized configuration
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     try:
         # You could add PLC connectivity check here
-        return {
-            "status": "healthy",
-            "timestamp": time.time(),
-            "service": "elixir-backend"
-        }
+        return get_health_response()
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return JSONResponse(
@@ -112,8 +111,9 @@ async def health_check():
             content={
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": time.time(),
-                "service": "elixir-backend"
+                "service": get_name().lower().replace(" ", "-"),
+                "version": get_version(),
+                "timestamp": time.time()
             }
         )
 
@@ -128,32 +128,10 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "success": False,
             "message": "Internal server error",
-            "error": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else "Internal error"
+            "error": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else "Internal error",
+            "version": get_version()
         }
     )
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event"""
-    logger.info("Starting Elixir Backend API server")
-    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"PLC IP: {os.getenv('PLC_IP', 'not configured')}")
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event"""
-    logger.info("Shutting down Elixir Backend API server")
-    
-    # Clean up PLC connections if needed
-    try:
-        from api.routes import plc_instance
-        if plc_instance:
-            plc_instance.disconnect()
-            logger.info("PLC connection closed")
-    except Exception as e:
-        logger.error(f"Error during PLC cleanup: {e}")
 
 if __name__ == "__main__":
     # Development server

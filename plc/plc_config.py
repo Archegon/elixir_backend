@@ -10,7 +10,7 @@ import os
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from .logger import setup_logger
+from core.logger import setup_logger
 
 class PLCConfig:
     """Manages PLC address configuration"""

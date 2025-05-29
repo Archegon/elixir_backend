@@ -16,7 +16,7 @@ from snap7.util import (
     set_real,
 )
 
-from .logger import setup_logger, log_performance, ContextLogger
+from core.logger import setup_logger, log_performance, ContextLogger
 
 
 class OutputType:

@@ -7,7 +7,7 @@ import threading
 
 class TestS7200Connection:
     """Test suite for S7_200 connection functionality."""
-    
+
     @patch("plc.plc.snap7.client.Client")
     @patch("plc.plc.os.getenv")
     def test_init_with_explicit_params(self, mock_getenv, mock_client):
@@ -15,7 +15,7 @@ class TestS7200Connection:
         # Arrange
         mock_instance = mock_client.return_value
         mock_instance.get_connected.return_value = True
-        
+
         # Act
         plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
         
@@ -61,8 +61,8 @@ class TestS7200Connection:
         
         # Act - should not raise exception
         plc = S7_200(ip="192.168.1.100", localtsap=0x0100, remotetsap=0x0200)
-        
-        # Assert
+
+    # Assert
         mock_instance.connect.assert_called_once()
         assert plc.plc == mock_instance
 

@@ -77,6 +77,16 @@ Or with pipx:
 pipx install poetry
 ```
 
+For Raspberry Pi / Linux:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+Add Poetry to Path:
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+```
+
 ### Install dependencies and set up the environment:
 
 ```bash

@@ -92,8 +92,8 @@ def setup_logger(
         log_dir_path = Path(log_dir)
         log_dir_path.mkdir(exist_ok=True)
         
-        # Create log file path
-        log_file = log_dir_path / f"{name.replace('.', '_')}.log"
+        # Create log file path - using single log file for all loggers
+        log_file = log_dir_path / "application.log"
         
         # Rotating file handler to prevent huge log files
         file_handler = logging.handlers.RotatingFileHandler(

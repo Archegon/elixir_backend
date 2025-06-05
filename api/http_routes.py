@@ -1,8 +1,14 @@
 """
 HTTP Routes for Elixir Backend - S7-200 PLC Integration
 
-This module provides HTTP REST endpoints for interacting with the S7-200 PLC system.
-All routes are organized into logical categories for easy navigation in the API documentation.
+This module provides HTTP REST endpoints for COMMAND OPERATIONS ONLY.
+All status reading should use WebSocket endpoints for real-time updates.
+
+ARCHITECTURAL PRINCIPLE:
+- HTTP endpoints: Commands and control operations (writing to PLC)
+- WebSocket endpoints: Status monitoring and data reading (reading from PLC)
+
+All routes send simple commands to the PLC and let the PLC handle the actual logic.
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -25,17 +31,7 @@ router = APIRouter()
     response_model=PLCResponse,
     tags=["Configuration Management"],
     summary="Reload PLC Configuration",
-    description="""
-    Reload the PLC address configuration from the configuration file.
-    
-    This endpoint is useful when you've updated the PLC address mappings 
-    and need to refresh the system without restarting the server.
-    
-    **Use Cases:**
-    - After updating address configuration files
-    - When adding new PLC address mappings
-    - Troubleshooting configuration issues
-    """,
+    description="Reload PLC address configuration from file. Useful after updating address mappings without restarting the server.",
     responses={
         200: {"description": "Configuration reloaded successfully"},
         500: {"description": "Failed to reload configuration"}
@@ -56,18 +52,7 @@ async def reload_plc_config():
     response_model=PLCResponse,
     tags=["Configuration Management"],
     summary="Get All PLC Addresses",
-    description="""
-    Retrieve all configured PLC addresses organized by categories.
-    
-    Returns a comprehensive mapping of all available PLC memory addresses
-    used by the system, organized by functional categories such as:
-    - Authentication
-    - Language control
-    - Control panel
-    - Pressure control
-    - Session management
-    - And more...
-    """,
+    description="Retrieve all configured PLC addresses organized by functional categories (authentication, control panel, pressure control, etc.).",
     responses={
         200: {"description": "Address configuration retrieved successfully"},
         500: {"description": "Failed to retrieve address configuration"}
@@ -93,15 +78,7 @@ async def get_all_addresses():
     response_model=PLCResponse,
     tags=["Configuration Management"],
     summary="Search Functions by Address",
-    description="""
-    Search for all functions that use a specific PLC memory address.
-    
-    This is useful for debugging and understanding which system functions
-    are mapped to a particular memory location in the PLC.
-    
-    **Example:** `/api/config/search/V100.0` might return all functions
-    using that specific memory address.
-    """,
+    description="Search for all functions that use a specific PLC memory address. Useful for debugging and understanding address mappings.",
     responses={
         200: {"description": "Search completed successfully"},
         500: {"description": "Search operation failed"}
@@ -129,15 +106,7 @@ async def search_address(address: str):
     response_model=PLCResponse,
     tags=["Authentication & Security"],
     summary="Show Password Screen",
-    description="""
-    Display the password authentication screen on the hyperbaric chamber interface.
-    
-    This triggers the display of the password entry screen, allowing users
-    to authenticate before accessing system controls.
-    
-    **Security Note:** This only shows the password screen; actual authentication
-    happens through subsequent password input and validation.
-    """,
+    description="Display the password authentication screen on the hyperbaric chamber interface.",
     responses={
         200: {"description": "Password screen displayed successfully"},
         500: {"description": "Failed to display password screen"}
@@ -160,12 +129,7 @@ async def show_password_screen(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Authentication & Security"],
     summary="Proceed from Password Screen",
-    description="""
-    Proceed from the password screen after successful authentication.
-    
-    This endpoint should be called after the user has entered the correct
-    password to advance to the main system interface.
-    """,
+    description="Proceed from the password screen after successful authentication.",
     responses={
         200: {"description": "Successfully proceeded from password screen"},
         500: {"description": "Failed to proceed from password screen"}
@@ -188,12 +152,7 @@ async def proceed_from_password(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Authentication & Security"],
     summary="Go Back from Password Screen",
-    description="""
-    Navigate back from the password screen to the previous interface.
-    
-    This allows users to return to the previous screen if they accessed
-    the password screen by mistake or need to cancel authentication.
-    """,
+    description="Navigate back from the password screen to the previous interface.",
     responses={
         200: {"description": "Successfully navigated back from password screen"},
         500: {"description": "Failed to navigate back from password screen"}
@@ -216,15 +175,7 @@ async def back_from_password(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Authentication & Security"],
     summary="Set Password Input",
-    description="""
-    Submit password input for authentication.
-    
-    Send the entered password to the PLC system for validation.
-    The password will be verified against stored user or admin credentials.
-    
-    **Security:** Passwords are transmitted securely and logged without
-    revealing the actual password content.
-    """,
+    description="Submit password input for authentication. The password will be verified against stored credentials.",
     responses={
         200: {"description": "Password input submitted successfully"},
         500: {"description": "Failed to submit password input"}
@@ -247,16 +198,7 @@ async def set_password_input(request: PasswordRequest, plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Authentication & Security"],
     summary="Get Authentication Status",
-    description="""
-    Retrieve the current authentication status and password information.
-    
-    Returns information about:
-    - Current authentication proceed status
-    - Password change status
-    - User and admin password configurations
-    
-    **Note:** Actual password values may be hashed or encoded for security.
-    """,
+    description="Retrieve current authentication status including proceed status, password change status, and stored passwords.",
     responses={
         200: {"description": "Authentication status retrieved successfully"},
         500: {"description": "Failed to retrieve authentication status"}
@@ -287,19 +229,7 @@ async def get_auth_status(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Language & Localization"],
     summary="Switch System Language",
-    description="""
-    Toggle between English and Chinese language interfaces.
-    
-    This endpoint switches the display language for the hyperbaric chamber
-    user interface. The system supports bilingual operation with seamless
-    switching between English and Chinese.
-    
-    **Supported Languages:**
-    - English (EN)
-    - Chinese (CN)
-    
-    The language change affects all display text, labels, and user messages.
-    """,
+    description="Toggle between English and Chinese language interfaces for the hyperbaric chamber display.",
     responses={
         200: {"description": "Language switched successfully"},
         500: {"description": "Failed to switch language"}
@@ -322,17 +252,7 @@ async def switch_language(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Language & Localization"],
     summary="Get Current Language Setting",
-    description="""
-    Retrieve the current language setting of the system.
-    
-    Returns the active language configuration, showing which language
-    is currently being used for the user interface display.
-    
-    **Response includes:**
-    - English activation status
-    - Chinese activation status
-    - Current active language identifier
-    """,
+    description="Retrieve the current language setting showing which language is active (English or Chinese).",
     responses={
         200: {"description": "Current language retrieved successfully"},
         500: {"description": "Failed to retrieve language status"}
@@ -362,20 +282,7 @@ async def get_current_language(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Control Panel & System"],
     summary="Initiate System Shutdown",
-    description="""
-    Trigger a controlled shutdown of the hyperbaric chamber system.
-    
-    **⚠️ WARNING:** This initiates a complete system shutdown sequence.
-    Use with extreme caution and ensure all safety protocols are followed.
-    
-    **Safety Considerations:**
-    - Ensure chamber is fully depressurized
-    - Verify no active sessions are running
-    - Confirm all personnel are safely outside the chamber
-    
-    This operation logs a high-priority warning and should only be used
-    when a complete system shutdown is required.
-    """,
+    description="⚠️ WARNING: Trigger a controlled shutdown of the hyperbaric chamber system. Use with extreme caution.",
     responses={
         200: {"description": "System shutdown initiated successfully"},
         500: {"description": "Failed to initiate system shutdown"}
@@ -398,18 +305,7 @@ async def shutdown_system(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Control Panel & System"],
     summary="Toggle Air Conditioning",
-    description="""
-    Toggle the air conditioning system on or off.
-    
-    Controls the main air conditioning unit for climate control within
-    the hyperbaric chamber. This affects temperature regulation and
-    air circulation during treatment sessions.
-    
-    **Features:**
-    - Automatic state detection and toggling
-    - Returns new state after toggle operation
-    - Integrated with temperature control system
-    """,
+    description="Toggle the air conditioning system on or off. Controls climate control within the chamber.",
     responses={
         200: {"description": "AC toggled successfully", "content": {"application/json": {"example": {"success": True, "data": {"ac_state": True}, "message": "AC toggled"}}}},
         500: {"description": "Failed to toggle AC"}
@@ -433,18 +329,7 @@ async def toggle_ac(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Control Panel & System"],
     summary="Toggle Ceiling Lights",
-    description="""
-    Toggle the main ceiling lighting system within the hyperbaric chamber.
-    
-    Controls the primary overhead lighting that provides general illumination
-    for the chamber interior. This is separate from reading lights and
-    provides the main ambient lighting for treatments.
-    
-    **Lighting Features:**
-    - Main ambient lighting control
-    - Independent of reading lights
-    - Suitable for general chamber illumination
-    """,
+    description="Toggle the main ceiling lighting system within the hyperbaric chamber.",
     responses={
         200: {"description": "Ceiling lights toggled successfully"},
         500: {"description": "Failed to toggle ceiling lights"}
@@ -468,18 +353,7 @@ async def toggle_ceiling_lights(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Control Panel & System"],
     summary="Toggle Reading Lights",
-    description="""
-    Toggle the reading lights within the hyperbaric chamber.
-    
-    Controls focused lighting designed for reading and detailed activities
-    during treatment sessions. These lights provide targeted illumination
-    and are independent of the main ceiling lights.
-    
-    **Reading Light Features:**
-    - Focused illumination for reading
-    - Independent control from ceiling lights
-    - Optimized for close-up activities
-    """,
+    description="Toggle the reading lights for focused illumination during treatment sessions.",
     responses={
         200: {"description": "Reading lights toggled successfully"},
         500: {"description": "Failed to toggle reading lights"}
@@ -503,20 +377,7 @@ async def toggle_reading_lights(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Control Panel & System"],
     summary="Toggle Intercom System",
-    description="""
-    Toggle the intercom communication system.
-    
-    Controls the two-way communication system between the chamber interior
-    and the operator/monitoring station. Essential for safety communication
-    during treatment sessions.
-    
-    **Safety Features:**
-    - Two-way communication capability
-    - Emergency communication channel
-    - Clear audio transmission
-    
-    **⚠️ Safety Note:** Ensure intercom is functional before starting any treatment.
-    """,
+    description="Toggle the intercom communication system between chamber and operator station. ⚠️ Ensure functional before treatment.",
     responses={
         200: {"description": "Intercom toggled successfully"},
         500: {"description": "Failed to toggle intercom"}
@@ -540,22 +401,7 @@ async def toggle_intercom(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Control Panel & System"],
     summary="Get Control Panel Status",
-    description="""
-    Retrieve the current status of all control panel components.
-    
-    Provides a comprehensive overview of all controllable systems including:
-    - Air conditioning state
-    - Lighting systems (ceiling and reading)
-    - Intercom communication system
-    - Door lighting status
-    - System shutdown status
-    
-    **Use Cases:**
-    - System status monitoring
-    - Dashboard displays
-    - Pre-session system checks
-    - Troubleshooting and diagnostics
-    """,
+    description="Retrieve current status of all control panel components (AC, lights, intercom, shutdown status).",
     responses={
         200: {"description": "Control panel status retrieved successfully"},
         500: {"description": "Failed to retrieve control panel status"}
@@ -585,23 +431,7 @@ async def get_control_status(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Pressure Control"],
     summary="Increase Pressure Setpoint",
-    description="""
-    Increase the pressure setpoint by 10 units.
-    
-    This endpoint provides fine-grained control over chamber pressure
-    by incrementally increasing the target pressure. The increment
-    is fixed at 10 units to ensure safe and controlled pressure changes.
-    
-    **Safety Features:**
-    - Fixed increment prevents accidental large pressure changes
-    - Pressure limits are enforced by the PLC system
-    - All pressure changes are logged for safety monitoring
-    
-    **Use Cases:**
-    - Fine-tuning pressure during treatment
-    - Gradual pressure adjustments
-    - Operator-controlled pressure increases
-    """,
+    description="Increase the pressure setpoint by 10 units with safety limits enforced by PLC.",
     responses={
         200: {"description": "Pressure setpoint increased successfully"},
         500: {"description": "Failed to increase pressure setpoint"}
@@ -624,23 +454,7 @@ async def add_pressure(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Pressure Control"],
     summary="Decrease Pressure Setpoint",
-    description="""
-    Decrease the pressure setpoint by 10 units.
-    
-    This endpoint provides controlled pressure reduction by decreasing
-    the target pressure in safe increments. Essential for gradual
-    depressurization and fine pressure adjustments.
-    
-    **Safety Features:**
-    - Fixed decrement prevents rapid depressurization
-    - Minimum pressure limits enforced by PLC
-    - Comprehensive logging for safety compliance
-    
-    **Use Cases:**
-    - Gradual pressure reduction
-    - Fine-tuning during treatment
-    - Controlled depressurization steps
-    """,
+    description="Decrease the pressure setpoint by 10 units for controlled pressure reduction.",
     responses={
         200: {"description": "Pressure setpoint decreased successfully"},
         500: {"description": "Failed to decrease pressure setpoint"}
@@ -663,26 +477,7 @@ async def subtract_pressure(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Pressure Control"],
     summary="Set Pressure Setpoint Directly",
-    description="""
-    Set the pressure setpoint to a specific value.
-    
-    Allows direct setting of the target pressure for precise control.
-    This bypasses incremental adjustments and sets the exact desired
-    pressure value.
-    
-    **⚠️ Safety Warning:** Direct pressure setting should be used with caution.
-    Ensure the target pressure is within safe operating ranges and consider
-    the rate of pressure change.
-    
-    **Input Validation:**
-    - Pressure value must be within system limits
-    - PLC enforces safety boundaries
-    - Invalid values will be rejected
-    
-    **Typical Pressure Ranges:**
-    - Therapeutic range: 1.3 - 3.0 ATA
-    - Emergency limit: 3.5 ATA maximum
-    """,
+    description="Set pressure setpoint to a specific value. ⚠️ Use with caution - ensure target is within safe operating ranges (1.3-3.0 ATA).",
     responses={
         200: {"description": "Pressure setpoint updated successfully"},
         400: {"description": "Invalid pressure value"},
@@ -706,26 +501,7 @@ async def set_pressure_setpoint(request: PressureRequest, plc = Depends(get_plc)
     response_model=PLCResponse,
     tags=["Pressure Control"],
     summary="Get Current Pressure Readings",
-    description="""
-    Retrieve current pressure readings from all pressure sensors.
-    
-    Provides real-time pressure data including:
-    - Target pressure setpoint
-    - Internal pressure sensor 1 reading
-    - Internal pressure sensor 2 reading
-    
-    **Redundancy:** Multiple pressure sensors provide redundant safety
-    monitoring and help detect sensor malfunctions.
-    
-    **Data Uses:**
-    - Real-time monitoring displays
-    - Safety system inputs
-    - Data logging and compliance
-    - Sensor health monitoring
-    
-    **Update Frequency:** Pressure readings are updated continuously
-    and reflect the most recent sensor values.
-    """,
+    description="Retrieve real-time pressure readings from all sensors including setpoint and dual internal pressure sensors.",
     responses={
         200: {"description": "Pressure readings retrieved successfully", "content": {"application/json": {"example": {"success": True, "data": {"setpoint": 2.0, "internal_pressure_1": 1.95, "internal_pressure_2": 1.97}}}}},
         500: {"description": "Failed to retrieve pressure readings"}
@@ -752,37 +528,7 @@ async def get_pressure_readings(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Session Management"],
     summary="Start Treatment Session",
-    description="""
-    Initiate a new hyperbaric treatment session and begin pressurization.
-    
-    This endpoint starts the complete treatment sequence including:
-    - Chamber sealing and safety checks
-    - Gradual pressurization to target pressure
-    - System monitoring activation
-    - Session timer initiation
-    - **Database session record creation**
-    
-    **Pre-Session Requirements:**
-    - Chamber must be properly sealed
-    - All safety systems operational
-    - Patient properly positioned
-    - Operator supervision confirmed
-    
-    **⚠️ Safety Protocol:** Only start sessions when all safety requirements
-    are met and qualified personnel are supervising.
-    
-    **Session Phases:**
-    1. Pre-pressurization checks
-    2. Gradual pressurization
-    3. Pressure stabilization
-    4. Treatment phase initiation
-    
-    **Database Integration:**
-    - Automatically creates session record in database
-    - Logs session start event
-    - Captures initial system parameters
-    - Enables data logging throughout session
-    """,
+    description="Start hyperbaric treatment session with pressurization, safety checks, and database logging. ⚠️ Ensure all safety requirements met.",
     responses={
         200: {"description": "Treatment session started successfully"},
         500: {"description": "Failed to start treatment session"}
@@ -879,37 +625,7 @@ async def start_session(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Session Management"],
     summary="End Treatment Session",
-    description="""
-    End the current treatment session and begin controlled depressurization.
-    
-    This endpoint initiates the session termination sequence including:
-    - Treatment phase completion
-    - Controlled depressurization sequence
-    - System monitoring during decompression
-    - Session data logging and completion
-    - **Database session finalization**
-    
-    **Depressurization Safety:**
-    - Gradual pressure reduction prevents decompression sickness
-    - Rate-controlled decompression per safety protocols
-    - Continuous monitoring during depressurization
-    - Emergency procedures available if needed
-    
-    **⚠️ Critical:** Do not interrupt the depressurization sequence once started.
-    Emergency procedures should only be used in life-threatening situations.
-    
-    **Post-Session:**
-    - Session data is automatically logged
-    - System performs post-session checks
-    - Chamber is prepared for next session
-    - **Database session record completed with final statistics**
-    
-    **Database Integration:**
-    - Automatically ends session record in database
-    - Calculates and stores final session statistics
-    - Logs session end event with completion reason
-    - Preserves complete session history
-    """,
+    description="End treatment session with controlled depressurization and database finalization. ⚠️ Do not interrupt depressurization once started.",
     responses={
         200: {"description": "Treatment session ended successfully"},
         500: {"description": "Failed to end treatment session"}
@@ -979,31 +695,7 @@ async def end_session(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Session Management"],
     summary="Confirm Depressurization",
-    description="""
-    Confirm and acknowledge the depressurization process.
-    
-    This endpoint provides operator confirmation for the depressurization
-    sequence, ensuring that the operator is aware and monitoring the
-    decompression process.
-    
-    **Confirmation Requirements:**
-    - Operator must be present and monitoring
-    - Patient condition confirmed stable
-    - All monitoring systems operational
-    - Emergency procedures ready if needed
-    
-    **Safety Verification:**
-    - Confirms operator awareness of decompression
-    - Acknowledges monitoring responsibility
-    - Enables safety interlocks
-    - Logs operator confirmation for compliance
-    
-    **Use Cases:**
-    - Required operator acknowledgment
-    - Safety protocol compliance
-    - Legal and medical documentation
-    - Emergency procedure preparation
-    """,
+    description="Confirm and acknowledge the depressurization process for operator verification and safety compliance.",
     responses={
         200: {"description": "Depressurization confirmed successfully"},
         500: {"description": "Failed to confirm depressurization"}
@@ -1027,34 +719,7 @@ async def confirm_depressurization(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Treatment Modes"],
     summary="Set Operating Mode",
-    description="""
-    Set the treatment operating mode for the hyperbaric session.
-    
-    The system supports multiple treatment modes, each optimized for
-    different therapeutic applications:
-    
-    **Available Modes:**
-    - **rest**: Relaxation and wellness mode (lower pressure, longer duration)
-    - **health**: General health and wellness treatments
-    - **professional**: Professional therapeutic treatments
-    - **custom**: User-defined custom treatment parameters
-    - **o2_100**: 100% oxygen delivery mode
-    - **o2_120**: 120-minute oxygen therapy mode
-    
-    **Mode Features:**
-    - Each mode has optimized pressure profiles
-    - Automatic duration settings (can be overridden)
-    - Integrated safety parameters
-    - Pre-configured treatment protocols
-    
-    **Duration Override:**
-    - Optional duration parameter overrides default mode timing
-    - Duration specified in minutes
-    - Must be within safe operational limits
-    
-    **Safety:** All modes include built-in safety limits and cannot exceed
-    maximum pressure or duration thresholds.
-    """,
+    description="Set treatment operating mode (rest, health, professional, custom, o2_100, o2_120) with optional duration override.",
     responses={
         200: {"description": "Operating mode set successfully"},
         400: {"description": "Invalid mode specified"},
@@ -1102,34 +767,7 @@ async def set_operating_mode(request: ModeRequest, plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Treatment Modes"],
     summary="Set Compression Mode",
-    description="""
-    Set the pressurization/compression mode for the treatment session.
-    
-    Different compression modes provide varying rates of pressurization
-    to accommodate different patient needs and treatment protocols:
-    
-    **Compression Modes:**
-    - **beginner**: Gentle, slow pressurization for first-time users
-      - Gradual pressure increase
-      - Extended compression time
-      - Maximum comfort and safety
-    
-    - **normal**: Standard pressurization rate for regular treatments
-      - Balanced speed and comfort
-      - Most commonly used mode
-      - Suitable for experienced patients
-    
-    - **fast**: Rapid pressurization for time-critical treatments
-      - Faster pressure increase
-      - Reduced compression time
-      - Only for experienced patients
-    
-    **Safety Considerations:**
-    - Beginner mode recommended for first-time users
-    - Fast mode requires patient comfort assessment
-    - All modes include safety pressure limits
-    - Automatic monitoring prevents unsafe pressure rates
-    """,
+    description="Set compression mode for pressurization rate: beginner (slow), normal (standard), or fast (rapid).",
     responses={
         200: {"description": "Compression mode set successfully"},
         400: {"description": "Invalid compression mode"},
@@ -1169,36 +807,7 @@ async def set_compression_mode(mode: str, plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Treatment Modes"],
     summary="Set Oxygen Delivery Mode",
-    description="""
-    Configure the oxygen delivery mode for the treatment session.
-    
-    The system supports two primary oxygen delivery methods, each
-    optimized for different therapeutic protocols:
-    
-    **Oxygen Delivery Modes:**
-    
-    - **continuous**: Constant oxygen delivery throughout session
-      - Steady oxygen concentration
-      - Consistent therapeutic levels
-      - Suitable for most treatments
-      - Provides sustained oxygen exposure
-    
-    - **intermittent**: Alternating oxygen delivery cycles
-      - Periodic oxygen delivery with air breaks
-      - Prevents oxygen toxicity
-      - Suitable for longer treatments
-      - Reduces risk of oxygen-related side effects
-    
-    **Therapeutic Benefits:**
-    - Continuous mode: Maximum oxygen saturation
-    - Intermittent mode: Extended treatment tolerance
-    
-    **Safety Features:**
-    - Automatic oxygen concentration monitoring
-    - Built-in toxicity prevention
-    - Emergency air backup systems
-    - Real-time oxygen level tracking
-    """,
+    description="Set oxygen delivery mode: continuous (constant delivery) or intermittent (alternating cycles with air breaks).",
     responses={
         200: {"description": "Oxygen delivery mode set successfully"},
         400: {"description": "Invalid oxygen mode"},
@@ -1230,36 +839,7 @@ async def set_oxygen_mode(mode: str, plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Climate Control"],
     summary="Set Air Conditioning Mode",
-    description="""
-    Configure the air conditioning fan mode for optimal climate control.
-    
-    The AC system provides multiple fan modes to accommodate different
-    comfort levels and treatment requirements:
-    
-    **Available AC Modes:**
-    - **auto**: Automatic fan speed adjustment based on temperature differential
-      - Energy efficient operation
-      - Maintains consistent temperature
-      - Adjusts fan speed as needed
-    
-    - **low**: Low-speed continuous operation
-      - Quiet operation for sensitive patients
-      - Minimal air movement
-      - Extended motor life
-    
-    - **mid**: Medium-speed continuous operation
-      - Balanced performance and noise
-      - Good for most treatments
-      - Moderate air circulation
-    
-    - **high**: High-speed continuous operation
-      - Maximum cooling/heating capacity
-      - Rapid temperature adjustment
-      - Maximum air circulation
-    
-    **Integration:** AC mode works in conjunction with temperature setpoints
-    and heating/cooling settings for comprehensive climate control.
-    """,
+    description="Configure AC fan mode: auto (temperature-based), low, mid, or high speed for optimal climate control.",
     responses={
         200: {"description": "AC mode set successfully"},
         400: {"description": "Invalid AC mode specified"},
@@ -1300,31 +880,7 @@ async def set_ac_mode(mode: str, plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Climate Control"],
     summary="Set Temperature Setpoint",
-    description="""
-    Set the target temperature for the hyperbaric chamber climate control.
-    
-    This endpoint allows precise temperature control for patient comfort
-    and therapeutic effectiveness. The system maintains the setpoint
-    through integrated heating and cooling systems.
-    
-    **Temperature Range:**
-    - Typical range: 18°C - 28°C (64°F - 82°F)
-    - Precision: ±0.5°C accuracy
-    - Safety limits enforced by PLC
-    
-    **Climate Features:**
-    - Automatic temperature maintenance
-    - Gradual temperature adjustment
-    - Integrated humidity control
-    - Energy-efficient operation
-    
-    **Patient Comfort:**
-    - Optimal temperature ranges for different treatments
-    - Consideration for pressure-related thermal effects
-    - Adjustable for individual patient needs
-    
-    **Safety:** Temperature limits prevent uncomfortable or unsafe conditions.
-    """,
+    description="Set target temperature for chamber climate control. Range: 18°C-28°C with ±0.5°C accuracy.",
     responses={
         200: {"description": "Temperature setpoint updated successfully"},
         400: {"description": "Temperature value out of range"},
@@ -1348,32 +904,7 @@ async def set_temperature_setpoint(request: TemperatureRequest, plc = Depends(ge
     response_model=PLCResponse,
     tags=["Climate Control"],
     summary="Toggle Heating/Cooling Mode",
-    description="""
-    Switch between heating and cooling modes for the HVAC system.
-    
-    This endpoint toggles the primary HVAC operation mode, determining
-    whether the system provides heating or cooling to reach the target
-    temperature setpoint.
-    
-    **HVAC Modes:**
-    - **heating**: Provides warm air to increase chamber temperature
-      - Suitable for colder environments
-      - Comfort during extended treatments
-      - Therapeutic benefit maintenance
-    
-    - **cooling**: Provides cool air to decrease chamber temperature
-      - Prevents overheating during treatments
-      - Patient comfort in warm conditions
-      - Equipment protection from excess heat
-    
-    **Automatic Operation:**
-    - System automatically maintains setpoint temperature
-    - Mode selection affects how setpoint is achieved
-    - Integrated with fan speed control
-    - Energy-efficient operation
-    
-    **Response:** Returns the new HVAC mode after toggle operation.
-    """,
+    description="Toggle between heating and cooling modes for the HVAC system to reach target temperature.",
     responses={
         200: {"description": "HVAC mode toggled successfully"},
         500: {"description": "Failed to toggle heating/cooling mode"}
@@ -1399,37 +930,7 @@ async def toggle_heating_cooling(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Sensors & Monitoring"],
     summary="Get All Sensor Readings",
-    description="""
-    Retrieve real-time readings from all environmental and safety sensors.
-    
-    This endpoint provides comprehensive sensor data for monitoring
-    the hyperbaric chamber environment and ensuring patient safety:
-    
-    **Environmental Sensors:**
-    - **current_temp**: Real-time chamber temperature (°C)
-    - **current_humidity**: Relative humidity percentage (%)
-    
-    **Oxygen Monitoring:**
-    - **ambient_o2**: Primary oxygen concentration sensor (%)
-    - **ambient_o2_2**: Secondary oxygen concentration sensor (%)
-    - **ambient_o2_check_flag**: Oxygen sensor validation status
-    
-    **Pressure Monitoring:**
-    - **internal_pressure_1**: Primary pressure sensor (ATA)
-    - **internal_pressure_2**: Secondary pressure sensor (ATA)
-    
-    **Data Quality:**
-    - Real-time updates (sub-second refresh)
-    - Redundant sensors for critical measurements
-    - Automatic sensor health monitoring
-    - Data validation and error detection
-    
-    **Applications:**
-    - Real-time monitoring displays
-    - Safety system inputs
-    - Data logging and compliance
-    - Trend analysis and diagnostics
-    """,
+    description="Retrieve real-time readings from all environmental and safety sensors (temperature, humidity, oxygen, pressure).",
     responses={
         200: {"description": "Sensor readings retrieved successfully"},
         500: {"description": "Failed to retrieve sensor readings"}
@@ -1460,37 +961,7 @@ async def get_sensor_readings(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Calibration & Maintenance"],
     summary="Calibrate Pressure Sensors",
-    description="""
-    Initiate calibration procedure for pressure sensors.
-    
-    Pressure sensor calibration ensures accurate readings critical for
-    patient safety and treatment effectiveness. This procedure should
-    be performed regularly as part of preventive maintenance.
-    
-    **Calibration Process:**
-    - Automated calibration sequence
-    - Multi-point calibration verification
-    - Atmospheric pressure reference
-    - Sensor drift compensation
-    
-    **When to Calibrate:**
-    - Regular maintenance schedule (monthly)
-    - After sensor replacement
-    - Following system maintenance
-    - If pressure readings seem inaccurate
-    
-    **⚠️ Safety Requirements:**
-    - Chamber must be at atmospheric pressure
-    - No active treatment sessions
-    - Qualified technician supervision required
-    - Calibration standards must be current
-    
-    **Quality Assurance:**
-    - Calibration results are automatically logged
-    - Deviation limits are enforced
-    - Failed calibrations trigger alerts
-    - Maintenance records are updated
-    """,
+    description="Initiate pressure sensor calibration procedure. ⚠️ Requires atmospheric pressure, no active sessions, and qualified technician.",
     responses={
         200: {"description": "Pressure sensor calibration initiated"},
         500: {"description": "Failed to start pressure sensor calibration"}
@@ -1513,42 +984,7 @@ async def calibrate_pressure_sensor(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Calibration & Maintenance"],
     summary="Calibrate Oxygen Sensors",
-    description="""
-    Initiate calibration procedure for oxygen concentration sensors.
-    
-    Oxygen sensor calibration is critical for ensuring accurate oxygen
-    delivery and preventing oxygen toxicity. Regular calibration maintains
-    measurement accuracy and patient safety.
-    
-    **Calibration Process:**
-    - Two-point calibration (air and pure oxygen)
-    - Temperature compensation
-    - Drift correction algorithms
-    - Cross-reference validation
-    
-    **Calibration Standards:**
-    - Room air (20.9% O2) reference
-    - Medical-grade oxygen (99.5%+ O2)
-    - Temperature and pressure correction
-    - Humidity compensation
-    
-    **When to Calibrate:**
-    - Weekly maintenance schedule
-    - Before critical treatments
-    - After sensor replacement
-    - Following environmental changes
-    
-    **⚠️ Safety Protocol:**
-    - Use certified calibration gases only
-    - Ensure proper ventilation
-    - No ignition sources present
-    - Qualified personnel only
-    
-    **Documentation:**
-    - Calibration certificates maintained
-    - Regulatory compliance tracking
-    - Deviation analysis and trending
-    """,
+    description="Initiate oxygen sensor calibration using air and pure oxygen references. ⚠️ Use certified gases only with proper ventilation.",
     responses={
         200: {"description": "Oxygen sensor calibration initiated"},
         500: {"description": "Failed to start oxygen sensor calibration"}
@@ -1572,39 +1008,7 @@ async def calibrate_oxygen_sensor(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Manual Control & Override"],
     summary="Toggle Manual Mode",
-    description="""
-    Enable or disable manual control mode for system components.
-    
-    Manual mode allows direct operator control of individual system
-    components, bypassing automatic control algorithms. This mode is
-    intended for maintenance, testing, and emergency situations.
-    
-    **⚠️ WARNING:** Manual mode disables safety interlocks and automatic
-    protections. Use only with qualified personnel and extreme caution.
-    
-    **Manual Mode Features:**
-    - Direct component control
-    - Bypass of automatic safety systems
-    - Individual component operation
-    - Real-time response to operator commands
-    
-    **Safety Considerations:**
-    - Requires qualified operator supervision
-    - Emergency stop systems remain active
-    - Comprehensive logging of all actions
-    - Time limits on manual operation
-    
-    **Typical Use Cases:**
-    - System troubleshooting
-    - Component testing
-    - Maintenance procedures
-    - Emergency response situations
-    
-    **Automatic Reversion:**
-    - Manual mode times out after inactivity
-    - Safety systems can override manual commands
-    - Automatic return to normal operation
-    """,
+    description="⚠️ WARNING: Enable/disable manual control mode bypassing automatic safety systems. Use only with qualified supervision.",
     responses={
         200: {"description": "Manual mode toggled successfully"},
         500: {"description": "Failed to toggle manual mode"}
@@ -1628,38 +1032,7 @@ async def toggle_manual_mode(plc = Depends(get_plc)):
     response_model=PLCResponse,
     tags=["Manual Control & Override"],
     summary="Set Manual Control Values",
-    description="""
-    Set individual component control values in manual mode.
-    
-    This endpoint allows direct control of system components when manual
-    mode is active. Each component can be controlled independently with
-    precise value settings.
-    
-    **Available Manual Controls:**
-    - **release_solenoid**: Pressure release valve control (boolean)
-    - **air_pump1**: Primary air pump operation (boolean)
-    - **air_pump2**: Secondary air pump operation (boolean)
-    - **oxygen_supply1**: Primary oxygen supply valve (boolean)
-    - **oxygen_supply2**: Secondary oxygen supply valve (boolean)
-    - **release_solenoid_set**: Release valve position setting (numeric)
-    
-    **⚠️ CRITICAL SAFETY WARNING:**
-    - Manual control bypasses automatic safety systems
-    - Incorrect settings can create dangerous conditions
-    - Qualified personnel supervision required
-    - Emergency stop systems remain active
-    
-    **Component Functions:**
-    - **Pumps**: Control pressurization rate and capacity
-    - **Solenoids**: Manage pressure release and safety systems
-    - **Oxygen Supplies**: Control therapeutic gas delivery
-    
-    **Safety Features:**
-    - All manual operations are logged
-    - Emergency override capabilities
-    - Time-limited operation
-    - Automatic safety monitoring continues
-    """,
+    description="⚠️ CRITICAL: Set individual component controls in manual mode. Bypasses safety systems - qualified personnel only.",
     responses={
         200: {"description": "Manual control values updated successfully"},
         400: {"description": "Invalid control parameter or value"},
@@ -1696,43 +1069,7 @@ async def set_manual_control(request: ManualControlRequest, plc = Depends(get_pl
     response_model=PLCResponse,
     tags=["System Status & Monitoring"],
     summary="Get Comprehensive System Status",
-    description="""
-    Retrieve complete system status including all operational states and timers.
-    
-    This endpoint provides a comprehensive overview of the hyperbaric chamber
-    system status, including session states, timing information, and critical
-    system flags.
-    
-    **Session Status Information:**
-    - **equalise_state**: Chamber pressure equalization status
-    - **running_state**: Active treatment session indicator
-    - **pressuring_state**: Pressurization process status
-    - **stabilising_state**: Pressure stabilization phase
-    - **stop_state**: System stop/halt condition
-    - **depressurise_state**: Depressurization process status
-    
-    **Timer Information:**
-    - **total_seconds**: Total accumulated time counter
-    - **seconds_counter**: Current session seconds
-    - **minute_counter**: Current session minutes
-    - **run_time_sec**: Treatment runtime seconds
-    - **run_time_min**: Treatment runtime minutes
-    - **run_times**: Number of completed sessions
-    
-    **System Health Indicators:**
-    - **shutdown_status**: System shutdown state
-    - **ambient_o2_check**: Oxygen monitoring system status
-    
-    **Data Applications:**
-    - Real-time system monitoring
-    - Operator dashboard displays
-    - Safety system status verification
-    - Maintenance and diagnostic information
-    - Compliance and audit reporting
-    
-    **Update Frequency:** Status data is updated in real-time and reflects
-    the current operational state of all monitored systems.
-    """,
+    description="Retrieve comprehensive system status including session states, timers, and system health indicators for monitoring.",
     responses={
         200: {"description": "System status retrieved successfully"},
         500: {"description": "Failed to retrieve system status"}
@@ -1753,12 +1090,8 @@ async def get_system_status(plc = Depends(get_plc)):
                     "depressurise_state": plc.getMem(Addresses.session("depressurise_state"))
                 },
                 "timers": {
-                    "total_seconds": plc.getMem(Addresses.timers("total_seconds_counter")),
-                    "seconds_counter": plc.getMem(Addresses.timers("seconds_counter")),
-                    "minute_counter": plc.getMem(Addresses.timers("minute_counter")),
-                    "run_time_sec": plc.getMem(Addresses.timers("run_time_sec")),
-                    "run_time_min": plc.getMem(Addresses.timers("run_time_min")),
-                    "run_times": plc.getMem(Addresses.timers("run_times"))
+                    "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
+                    "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min"))
                 },
                 "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
                 "ambient_o2_check": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))

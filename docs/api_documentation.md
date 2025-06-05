@@ -376,12 +376,8 @@ Get comprehensive system status.
       "depressurise_state": false
     },
     "timers": {
-      "total_seconds": 1800,
-      "seconds_counter": 30,
-      "minute_counter": 30,
-      "run_time_sec": 30,
-      "run_time_min": 30,
-      "run_times": 5
+      "run_time_remaining_sec": 30,
+      "run_time_remaining_min": 30
     },
     "shutdown_status": false,
     "ambient_o2_check": true
@@ -417,9 +413,9 @@ Real-time streaming of all system data.
     "ambient_o2_check": true
   },
   "timers": {
-    "run_time_sec": 30,
-    "run_time_min": 30,
-    "total_seconds": 1800
+    "run_time_remaining_sec": 30,
+    "run_time_remaining_min": 30,
+
   },
   "setpoints": {
     "pressure": 1.5,

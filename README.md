@@ -93,6 +93,20 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 poetry install
 ```
 
+🔧 Poetry Install Hangs or Keyring Errors
+If poetry install hangs or throws keyring-related errors in headless or minimal environments (e.g. Ubuntu server, Docker), apply the following fix:
+
+Disable Python keyring system:
+```bash
+export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+```
+
+To make it permanent, add the line to your shell config (e.g. ~/.bashrc, ~/.zshrc):
+```bash
+echo 'export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring' >> ~/.bashrc
+source ~/.bashrc
+```
+
 ### Activate the Poetry environment:
 
 ```bash

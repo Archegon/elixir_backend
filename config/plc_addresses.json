@@ -276,37 +276,13 @@
     }
   },
   "timers": {
-    "total_seconds_counter": {
-      "address": "VD590",
-      "comment": "Total seconds counter"
-    },
-    "seconds_counter": {
-      "address": "VD594",
-      "comment": "Seconds counter"
-    },
-    "minute_counter": {
-      "address": "VD598",
-      "comment": "Minute counter"
-    },
-    "run_time_sec": {
+    "run_time_remaining_sec": {
       "address": "VD690",
-      "comment": "Runtime seconds"
+      "comment": "Runtime remaining seconds"
     },
-    "run_time_min": {
+    "run_time_remaining_min": {
       "address": "VD694",
-      "comment": "Runtime minutes"
-    },
-    "run_times": {
-      "address": "VD1500",
-      "comment": "Total run times (Unconfirmed)"
-    },
-    "min2": {
-      "address": "VW44",
-      "comment": "Secondary minutes (Unconfirmed)"
-    },
-    "sec2": {
-      "address": "VW46",
-      "comment": "Secondary seconds (Unconfirmed)"
+      "comment": "Runtime remaining minutes"
     }
   }
 } 

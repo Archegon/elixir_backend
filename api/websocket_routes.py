@@ -1,12 +1,13 @@
 """
 WebSocket Routes for Elixir Backend
 
-This module provides WebSocket endpoints for real-time data streaming
-from the S7-200 PLC system.
+This module provides WebSocket endpoints for real-time status monitoring
+from the S7-200 PLC system. All status reading should use WebSocket for 
+real-time updates, while HTTP endpoints handle only command operations.
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import List
+from typing import List, Dict, Any
 import asyncio
 import json
 from datetime import datetime
@@ -52,13 +53,228 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+async def read_all_plc_status(plc) -> Dict[str, Any]:
+    """
+    Read all PLC status bits and values for comprehensive system monitoring.
+    This replaces the need for individual HTTP status endpoints.
+    """
+    try:
+        status_data = {
+            "timestamp": datetime.now().isoformat(),
+            
+            # Authentication & Security Status
+            "auth": {
+                "proceed_status": plc.getMem(Addresses.auth("proceed_status")),
+                "change_password_status": plc.getMem(Addresses.auth("change_password_status")),
+                "admin_password": plc.getMem(Addresses.auth("admin_password")),
+                "user_password": plc.getMem(Addresses.auth("user_password"))
+            },
+            
+            # Language Settings
+            "language": {
+                "current_language": plc.getMem(Addresses.language("current_language"))
+            },
+            
+            # Control Panel Status
+            "control_panel": {
+                "ac_state": plc.getMem(Addresses.control_panel("ac_state")),
+                "system_shutdown": plc.getMem(Addresses.control_panel("system_shutdown")),
+                "ceiling_lights_state": plc.getMem(Addresses.control_panel("ceiling_lights_state")),
+                "reading_lights_state": plc.getMem(Addresses.control_panel("reading_lights_state")),
+                "intercom_state": plc.getMem(Addresses.control_panel("intercom_state"))
+            },
+            
+            # Pressure System Status
+            "pressure": {
+                "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
+                "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
+                "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
+            },
+            
+            # Session Status
+            "session": {
+                "running_state": plc.getMem(Addresses.session("running_state")),
+                "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
+                "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
+                "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
+                "session_ended": plc.getMem(Addresses.session("session_ended")),
+                "depressurise_confirm": plc.getMem(Addresses.session("depressurise_confirm"))
+            },
+            
+            # Operating Modes Status
+            "modes": {
+                "current_mode": plc.getMem(Addresses.modes("current_mode")),
+                "custom_duration": plc.getMem(Addresses.modes("custom_duration")),
+                "compression_mode": plc.getMem(Addresses.modes("compression_mode")),
+                "oxygen_mode": plc.getMem(Addresses.modes("oxygen_mode"))
+            },
+            
+            # Climate Control Status
+            "climate": {
+                "ac_mode": plc.getMem(Addresses.ac("ac_mode")),
+                "temperature_setpoint": plc.getMem(Addresses.temperature("temperature_setpoint")),
+                "heating_cooling_mode": plc.getMem(Addresses.ac("heating_cooling_mode"))
+            },
+            
+            # Sensor Readings
+            "sensors": {
+                "current_temperature": plc.getMem(Addresses.sensors("current_temperature")),
+                "current_humidity": plc.getMem(Addresses.sensors("current_humidity")),
+                "ambient_o2": plc.getMem(Addresses.sensors("ambient_o2")),
+                "ambient_o2_2": plc.getMem(Addresses.sensors("ambient_o2_2")),
+                "ambient_o2_check_flag": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))
+            },
+            
+            # Calibration Status
+            "calibration": {
+                "pressure_sensor_calibration": plc.getMem(Addresses.calibration("pressure_sensor_calibration")),
+                "oxygen_sensor_calibration": plc.getMem(Addresses.calibration("oxygen_sensor_calibration"))
+            },
+            
+            # Manual Control Status
+            "manual": {
+                "manual_mode": plc.getMem(Addresses.manual("manual_mode"))
+            },
+            
+            # System Timers
+            "timers": {
+                "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
+                "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min")),
+                "session_elapsed_time": plc.getMem(Addresses.timers("session_elapsed_time"))
+            },
+            
+            # System Health
+            "system": {
+                "plc_connected": plc.plc.get_connected(),
+                "communication_errors": 0,  # Could track communication error count
+                "last_update": datetime.now().isoformat()
+            }
+        }
+        
+        return status_data
+        
+    except Exception as e:
+        logger.error(f"Error reading comprehensive PLC status: {e}")
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "system": {
+                "plc_connected": False,
+                "communication_errors": 1,
+                "last_update": datetime.now().isoformat()
+            }
+        }
+
+@router.websocket("/ws/system-status")
+async def websocket_comprehensive_status(websocket: WebSocket):
+    """
+    Primary WebSocket endpoint for comprehensive real-time system status.
+    This endpoint provides all PLC status bits and should be used by the frontend
+    for real-time monitoring instead of polling HTTP endpoints.
+    
+    Update frequency: 1 second for most data, with critical safety data prioritized.
+    """
+    await manager.connect(websocket)
+    communication_errors = 0
+    
+    try:
+        while True:
+            try:
+                plc = get_plc()
+                status_data = await read_all_plc_status(plc)
+                
+                # Add communication health info
+                status_data["system"]["communication_errors"] = communication_errors
+                
+                await manager.send_personal_message(json.dumps(status_data), websocket)
+                
+                # Reset error counter on successful read
+                communication_errors = 0
+                
+                # Update frequency: 1 second for comprehensive status
+                await asyncio.sleep(1.0)
+                
+            except Exception as e:
+                communication_errors += 1
+                logger.error(f"Error in comprehensive status WebSocket: {e}")
+                
+                # Send error status to frontend
+                error_data = {
+                    "timestamp": datetime.now().isoformat(),
+                    "error": str(e),
+                    "system": {
+                        "plc_connected": False,
+                        "communication_errors": communication_errors,
+                        "last_update": datetime.now().isoformat()
+                    }
+                }
+                
+                try:
+                    await manager.send_personal_message(json.dumps(error_data), websocket)
+                except:
+                    pass  # Connection might be broken
+                
+                # Exponential backoff on errors, max 10 seconds
+                await asyncio.sleep(min(2 ** min(communication_errors, 4), 10))
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@router.websocket("/ws/critical-status")
+async def websocket_critical_status(websocket: WebSocket):
+    """
+    High-frequency WebSocket endpoint for critical safety status.
+    Updates every 500ms for pressure, session state, and safety-critical data.
+    """
+    await manager.connect(websocket)
+    
+    try:
+        while True:
+            try:
+                plc = get_plc()
+                critical_data = {
+                    "timestamp": datetime.now().isoformat(),
+                    "pressure": {
+                        "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
+                        "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
+                        "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
+                    },
+                    "session": {
+                        "running_state": plc.getMem(Addresses.session("running_state")),
+                        "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
+                        "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
+                        "depressurise_state": plc.getMem(Addresses.session("depressurise_state"))
+                    },
+                    "safety": {
+                        "ambient_o2": plc.getMem(Addresses.sensors("ambient_o2")),
+                        "ambient_o2_2": plc.getMem(Addresses.sensors("ambient_o2_2")),
+                        "ambient_o2_check_flag": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))
+                    },
+                    "timers": {
+                        "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
+                        "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min"))
+                    }
+                }
+                
+                await manager.send_personal_message(json.dumps(critical_data), websocket)
+                
+                # High frequency updates for critical safety data
+                await asyncio.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"Error in critical status WebSocket: {e}")
+                await asyncio.sleep(2)
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+# Keep existing specialized endpoints for backward compatibility
 @router.websocket("/ws/live-data")
 async def websocket_live_data(websocket: WebSocket):
-    """WebSocket endpoint for live data streaming"""
+    """Legacy endpoint - consider using /ws/system-status instead"""
     await manager.connect(websocket)
     try:
         while True:
-            # Read all live data from PLC
             try:
                 plc = get_plc()
                 live_data = {
@@ -76,13 +292,12 @@ async def websocket_live_data(websocket: WebSocket):
                         "pressuring": plc.getMem(Addresses.session("pressuring_state")),
                         "stabilising": plc.getMem(Addresses.session("stabilising_state")),
                         "depressurising": plc.getMem(Addresses.session("depressurise_state")),
-                        "ac_state": plc.getMem(Addresses.control("ac_state")),
+                        "ac_state": plc.getMem(Addresses.control_panel("ac_state")),
                         "ambient_o2_check": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))
                     },
                     "timers": {
-                        "run_time_sec": plc.getMem(Addresses.timers("run_time_sec")),
-                        "run_time_min": plc.getMem(Addresses.timers("run_time_min")),
-                        "total_seconds": plc.getMem(Addresses.timers("total_seconds_counter"))
+                        "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
+                        "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min"))
                     },
                     "setpoints": {
                         "pressure": plc.getMem(Addresses.pressure("pressure_setpoint")),
@@ -91,11 +306,11 @@ async def websocket_live_data(websocket: WebSocket):
                 }
                 
                 await manager.send_personal_message(json.dumps(live_data), websocket)
-                await asyncio.sleep(1)  # Send updates every second
+                await asyncio.sleep(1)
                 
             except Exception as e:
                 logger.error(f"Error reading live data: {e}")
-                await asyncio.sleep(5)  # Wait longer on error
+                await asyncio.sleep(5)
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -119,7 +334,7 @@ async def websocket_pressure_data(websocket: WebSocket):
                 }
                 
                 await manager.send_personal_message(json.dumps(pressure_data), websocket)
-                await asyncio.sleep(0.5)  # Faster updates for pressure
+                await asyncio.sleep(0.5)
                 
             except Exception as e:
                 logger.error(f"Error reading pressure data: {e}")
@@ -146,7 +361,7 @@ async def websocket_sensor_data(websocket: WebSocket):
                 }
                 
                 await manager.send_personal_message(json.dumps(sensor_data), websocket)
-                await asyncio.sleep(2)  # Updates every 2 seconds for sensors
+                await asyncio.sleep(2)
                 
             except Exception as e:
                 logger.error(f"Error reading sensor data: {e}")

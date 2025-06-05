@@ -72,16 +72,18 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
             
             # Language Settings
             "language": {
-                "current_language": plc.getMem(Addresses.language("current_language"))
+                "english_active": plc.getMem(Addresses.language("english_active")),
+                "chinese_active": plc.getMem(Addresses.language("chinese_active")),
+                "language_switch": plc.getMem(Addresses.language("language_switch"))
             },
             
-            # Control Panel Status
+            # Control Panel Status  
             "control_panel": {
-                "ac_state": plc.getMem(Addresses.control_panel("ac_state")),
-                "system_shutdown": plc.getMem(Addresses.control_panel("system_shutdown")),
-                "ceiling_lights_state": plc.getMem(Addresses.control_panel("ceiling_lights_state")),
-                "reading_lights_state": plc.getMem(Addresses.control_panel("reading_lights_state")),
-                "intercom_state": plc.getMem(Addresses.control_panel("intercom_state"))
+                "ac_state": plc.getMem(Addresses.control("ac_state")),
+                "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
+                "ceiling_lights_state": plc.getMem(Addresses.control("ceiling_light_state")),
+                "reading_lights_state": plc.getMem(Addresses.control("reading_lights")),
+                "intercom_state": plc.getMem(Addresses.control("intercom_state"))
             },
             
             # Pressure System Status
@@ -97,23 +99,32 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
                 "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
                 "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
                 "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
-                "session_ended": plc.getMem(Addresses.session("session_ended")),
-                "depressurise_confirm": plc.getMem(Addresses.session("depressurise_confirm"))
+                "equalise_state": plc.getMem(Addresses.session("equalise_state")),
+                "depressurise_confirm": plc.getMem(Addresses.session("depressurisation_confirm"))
             },
             
             # Operating Modes Status
             "modes": {
-                "current_mode": plc.getMem(Addresses.modes("current_mode")),
-                "custom_duration": plc.getMem(Addresses.modes("custom_duration")),
-                "compression_mode": plc.getMem(Addresses.modes("compression_mode")),
-                "oxygen_mode": plc.getMem(Addresses.modes("oxygen_mode"))
+                "mode_rest": plc.getMem(Addresses.modes("mode_rest")),
+                "mode_health": plc.getMem(Addresses.modes("mode_health")),
+                "mode_professional": plc.getMem(Addresses.modes("mode_professional")),
+                "mode_custom": plc.getMem(Addresses.modes("mode_custom")),
+                "compression_beginner": plc.getMem(Addresses.modes("compression_beginner")),
+                "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
+                "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
+                "continuous_o2_flag": plc.getMem(Addresses.modes("continuous_o2_flag")),
+                "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag")),
+                "set_duration": plc.getMem(Addresses.modes("set_duration"))
             },
             
             # Climate Control Status
             "climate": {
-                "ac_mode": plc.getMem(Addresses.ac("ac_mode")),
+                "ac_auto": plc.getMem(Addresses.temperature("ac_auto")),
+                "ac_low": plc.getMem(Addresses.temperature("ac_low")),
+                "ac_mid": plc.getMem(Addresses.temperature("ac_mid")),
+                "ac_high": plc.getMem(Addresses.temperature("ac_high")),
                 "temperature_setpoint": plc.getMem(Addresses.temperature("temperature_setpoint")),
-                "heating_cooling_mode": plc.getMem(Addresses.ac("heating_cooling_mode"))
+                "heating_cooling_toggle": plc.getMem(Addresses.temperature("heating_cooling_toggle"))
             },
             
             # Sensor Readings
@@ -133,7 +144,12 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
             
             # Manual Control Status
             "manual": {
-                "manual_mode": plc.getMem(Addresses.manual("manual_mode"))
+                "manual_mode": plc.getMem(Addresses.manual("manual_mode")),
+                "release_solenoid_manual": plc.getMem(Addresses.manual("release_solenoid_manual")),
+                "air_pump1_manual": plc.getMem(Addresses.manual("air_pump1_manual")),
+                "air_pump2_manual": plc.getMem(Addresses.manual("air_pump2_manual")),
+                "oxygen_supply1_manual": plc.getMem(Addresses.manual("oxygen_supply1_manual")),
+                "oxygen_supply2_manual": plc.getMem(Addresses.manual("oxygen_supply2_manual"))
             },
             
             # System Timers

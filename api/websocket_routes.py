@@ -155,8 +155,7 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
             # System Timers
             "timers": {
                 "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
-                "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min")),
-                "session_elapsed_time": plc.getMem(Addresses.timers("session_elapsed_time"))
+                "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min"))
             },
             
             # System Health

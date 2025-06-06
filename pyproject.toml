@@ -1,6 +1,6 @@
 [project]
 name = "elixir-backend"
-version = "0.1.0"
+version = "1.0.0"
 description = "Backend API server for Elixir Hyperbaric Chamber System with S7-200 PLC Integration"
 authors = [
     {name = "Archegon", email = "ng.ta.wei@outlook.com"}

@@ -64,6 +64,10 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
             
             # Authentication & Security Status
             "auth": {
+                "show_password_screen": plc.getMem(Addresses.auth("show_password_screen")),
+                "proceed_password": plc.getMem(Addresses.auth("proceed_password")),
+                "back_password": plc.getMem(Addresses.auth("back_password")),
+                "password_input": plc.getMem(Addresses.auth("password_input")),
                 "proceed_status": plc.getMem(Addresses.auth("proceed_status")),
                 "change_password_status": plc.getMem(Addresses.auth("change_password_status")),
                 "admin_password": plc.getMem(Addresses.auth("admin_password")),

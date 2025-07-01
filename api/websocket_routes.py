@@ -194,7 +194,7 @@ async def websocket_comprehensive_status(websocket: WebSocket):
     This endpoint provides all PLC status bits and should be used by the frontend
     for real-time monitoring instead of polling HTTP endpoints.
     
-    Update frequency: 1 second for most data, with critical safety data prioritized.
+    Update frequency: 0.3 seconds for responsive UI updates and real-time interactions.
     """
     await manager.connect(websocket)
     communication_errors = 0
@@ -213,8 +213,8 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                 # Reset error counter on successful read
                 communication_errors = 0
                 
-                # Update frequency: 1 second for comprehensive status
-                await asyncio.sleep(1.0)
+                # Update frequency: 0.3 seconds for responsive UI updates
+                await asyncio.sleep(0.3)
                 
             except Exception as e:
                 communication_errors += 1
@@ -236,8 +236,8 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                 except:
                     pass  # Connection might be broken
                 
-                # Exponential backoff on errors, max 10 seconds
-                await asyncio.sleep(min(2 ** min(communication_errors, 4), 10))
+                # Faster error recovery for responsive UI, max 3 seconds
+                await asyncio.sleep(min(2 ** min(communication_errors, 2), 3))
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -245,8 +245,8 @@ async def websocket_comprehensive_status(websocket: WebSocket):
 @router.websocket("/ws/critical-status")
 async def websocket_critical_status(websocket: WebSocket):
     """
-    High-frequency WebSocket endpoint for critical safety status.
-    Updates every 500ms for pressure, session state, and safety-critical data.
+    Ultra-high-frequency WebSocket endpoint for critical safety status.
+    Updates every 200ms for pressure, session state, and safety-critical data.
     """
     await manager.connect(websocket)
     
@@ -280,8 +280,8 @@ async def websocket_critical_status(websocket: WebSocket):
                 
                 await manager.send_personal_message(json.dumps(critical_data), websocket)
                 
-                # High frequency updates for critical safety data
-                await asyncio.sleep(0.5)
+                # Ultra-high frequency updates for critical safety data
+                await asyncio.sleep(0.2)
                 
             except Exception as e:
                 logger.error(f"Error in critical status WebSocket: {e}")

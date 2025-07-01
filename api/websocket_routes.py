@@ -83,6 +83,7 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
                 "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
                 "ceiling_lights_state": plc.getMem(Addresses.control("ceiling_light_state")),
                 "reading_lights_state": plc.getMem(Addresses.control("reading_lights")),
+                "door_lights_state": plc.getMem(Addresses.control("door_light")),
                 "intercom_state": plc.getMem(Addresses.control("intercom_state"))
             },
             
@@ -109,12 +110,14 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
                 "mode_health": plc.getMem(Addresses.modes("mode_health")),
                 "mode_professional": plc.getMem(Addresses.modes("mode_professional")),
                 "mode_custom": plc.getMem(Addresses.modes("mode_custom")),
+                "mode_o2_100": plc.getMem(Addresses.modes("mode_o2_100")),
+                "mode_o2_120": plc.getMem(Addresses.modes("mode_o2_120")),
                 "compression_beginner": plc.getMem(Addresses.modes("compression_beginner")),
                 "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
                 "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
                 "continuous_o2_flag": plc.getMem(Addresses.modes("continuous_o2_flag")),
                 "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag")),
-                "set_duration": plc.getMem(Addresses.modes("set_duration"))
+                "custom_duration": plc.getMem(Addresses.modes("set_duration"))
             },
             
             # Climate Control Status

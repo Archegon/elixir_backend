@@ -373,6 +373,30 @@ async def toggle_reading_lights(plc = Depends(get_plc)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post(
+    "/api/control/lights/door/toggle", 
+    response_model=PLCResponse,
+    tags=["Control Panel & System"],
+    summary="Toggle Door Lights",
+    description="Toggle the door lighting system for entry and exit illumination.",
+    responses={
+        200: {"description": "Door lights toggled successfully"},
+        500: {"description": "Failed to toggle door lights"}
+    }
+)
+async def toggle_door_lights(plc = Depends(get_plc)):
+    """Toggle door lights"""
+    try:
+        with ContextLogger(logger, operation="DOOR_LIGHTS_TOGGLE"):
+            address = Addresses.control("door_light")
+            current_state = plc.getMem(address)
+            plc.writeMem(address, not current_state)
+            logger.info(f"Door lights toggled to {'ON' if not current_state else 'OFF'}")
+            return PLCResponse(success=True, data={"door_lights": not current_state}, message="Door lights toggled")
+    except Exception as e:
+        logger.error(f"Failed to toggle door lights: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post(
     "/api/control/intercom/toggle", 
     response_model=PLCResponse,
     tags=["Control Panel & System"],

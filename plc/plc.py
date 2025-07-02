@@ -104,7 +104,6 @@ class S7_200:
         self.logger.debug(f"Resolved memory area for {mem}: {area}")
         return area
 
-    @log_performance(setup_logger(f"{__name__}.S7_200"), "memory_read")
     def getMem(self, mem, returnByte=False):
         """Read memory from PLC with comprehensive logging."""
         original_mem = mem
@@ -205,7 +204,6 @@ class S7_200:
                 self.logger.error(f"Failed to read memory from {original_mem}: {e}")
                 raise
 
-    @log_performance(setup_logger(f"{__name__}.S7_200"), "memory_write")
     def writeMem(self, mem, value):
         """Write memory to PLC with comprehensive logging."""
         original_mem = mem

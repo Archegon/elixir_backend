@@ -697,7 +697,7 @@ async def toggle_equalise(plc = Depends(get_plc)):
         with ContextLogger(logger, operation="SESSION_EQUALISE"):
             # Read current equalise state
             equalise_address = Addresses.session("equalise_state")
-            current_state = plc.readMem(equalise_address)
+            current_state = plc.getMem(equalise_address)
             
             # Toggle the equalise state
             new_state = not current_state

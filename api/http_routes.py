@@ -1207,8 +1207,8 @@ async def read_custom_plc_address(address: str, plc = Depends(get_plc)):
             if not address or len(address) < 2:
                 raise HTTPException(status_code=400, detail="Invalid address format")
             
-            # Read the address
-            value = plc.readMem(address)
+            # Read the address - use getMem to match the rest of the codebase
+            value = plc.getMem(address)
             
             logger.info(f"Read custom address {address}: {value}")
             return PLCResponse(
@@ -1249,16 +1249,16 @@ async def write_custom_plc_address(address: str, request: CustomWriteRequest, pl
             
             # Read current value for logging
             try:
-                old_value = plc.readMem(address)
+                old_value = plc.getMem(address)
             except:
                 old_value = "unknown"
             
-            # Write the new value
-            plc.writeMem(address, request.value)
+            # Write the new value - use setMem to match the rest of the codebase
+            plc.setMem(address, request.value)
             
             # Verify the write by reading back
             try:
-                new_value = plc.readMem(address)
+                new_value = plc.getMem(address)
             except:
                 new_value = "unknown"
             
@@ -1275,4 +1275,102 @@ async def write_custom_plc_address(address: str, request: CustomWriteRequest, pl
             )
     except Exception as e:
         logger.error(f"Failed to write custom address {address}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === CUSTOM ADDRESS MONITORING MANAGEMENT ===
+@router.post(
+    "/api/plc/monitor/add/{address}",
+    response_model=PLCResponse,
+    tags=["Development & Debugging"],
+    summary="Add Address to Real-time Monitoring",
+    description="Add a PLC address to the WebSocket real-time monitoring stream.",
+    responses={
+        200: {"description": "Address added to monitoring successfully"},
+        400: {"description": "Invalid address format"},
+        500: {"description": "Failed to add address to monitoring"}
+    }
+)
+async def add_address_monitoring(address: str):
+    """Add address to WebSocket monitoring"""
+    try:
+        if not address or len(address) < 2:
+            raise HTTPException(status_code=400, detail="Invalid address format")
+        
+        # Import WebSocket manager
+        from .websocket_routes import manager
+        
+        manager.add_monitored_address(address)
+        
+        return PLCResponse(
+            success=True,
+            data={
+                "address": address,
+                "monitored_addresses": list(manager.get_monitored_addresses())
+            },
+            message=f"Address {address} added to real-time monitoring"
+        )
+    except Exception as e:
+        logger.error(f"Failed to add address {address} to monitoring: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete(
+    "/api/plc/monitor/remove/{address}",
+    response_model=PLCResponse,
+    tags=["Development & Debugging"],
+    summary="Remove Address from Real-time Monitoring",
+    description="Remove a PLC address from the WebSocket real-time monitoring stream.",
+    responses={
+        200: {"description": "Address removed from monitoring successfully"},
+        500: {"description": "Failed to remove address from monitoring"}
+    }
+)
+async def remove_address_monitoring(address: str):
+    """Remove address from WebSocket monitoring"""
+    try:
+        # Import WebSocket manager
+        from .websocket_routes import manager
+        
+        manager.remove_monitored_address(address)
+        
+        return PLCResponse(
+            success=True,
+            data={
+                "address": address,
+                "monitored_addresses": list(manager.get_monitored_addresses())
+            },
+            message=f"Address {address} removed from real-time monitoring"
+        )
+    except Exception as e:
+        logger.error(f"Failed to remove address {address} from monitoring: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get(
+    "/api/plc/monitor/list",
+    response_model=PLCResponse,
+    tags=["Development & Debugging"],
+    summary="List Monitored Addresses",
+    description="Get the list of PLC addresses currently being monitored in real-time.",
+    responses={
+        200: {"description": "Monitored addresses retrieved successfully"},
+        500: {"description": "Failed to retrieve monitored addresses"}
+    }
+)
+async def list_monitored_addresses():
+    """Get list of currently monitored addresses"""
+    try:
+        # Import WebSocket manager
+        from .websocket_routes import manager
+        
+        monitored = list(manager.get_monitored_addresses())
+        
+        return PLCResponse(
+            success=True,
+            data={
+                "monitored_addresses": monitored,
+                "count": len(monitored)
+            },
+            message=f"{len(monitored)} addresses currently monitored"
+        )
+    except Exception as e:
+        logger.error(f"Failed to list monitored addresses: {e}")
         raise HTTPException(status_code=500, detail=str(e))

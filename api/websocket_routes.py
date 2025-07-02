@@ -7,10 +7,12 @@ real-time updates, while HTTP endpoints handle only command operations.
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 import asyncio
 import json
 from datetime import datetime
+from fastapi import WebSocketState
+from fastapi.websockets import ConnectionClosedError
 
 from .shared import get_plc, logger, Addresses
 
@@ -22,6 +24,8 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
         self.logger = logger
+        # Add tracking for custom addresses
+        self.monitored_addresses: Set[str] = set()
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -35,10 +39,14 @@ class ConnectionManager:
 
     def has_active_connections(self) -> bool:
         """Check if there are any active WebSocket connections"""
+        # Clean up any closed connections
+        self.active_connections = [ws for ws in self.active_connections if ws.client_state == WebSocketState.CONNECTED]
         return len(self.active_connections) > 0
 
     def get_connection_count(self) -> int:
-        """Get the number of active connections"""
+        """Get the current number of active connections"""
+        # Clean up any closed connections
+        self.active_connections = [ws for ws in self.active_connections if ws.client_state == WebSocketState.CONNECTED]
         return len(self.active_connections)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
@@ -49,20 +57,40 @@ class ConnectionManager:
             # Remove failed connection
             self.disconnect(websocket)
 
-    async def broadcast(self, message: str):
-        if not self.has_active_connections():
-            return  # No connections to broadcast to
+    async def broadcast(self, message: dict):
+        """Broadcast message to all active connections"""
+        if not self.active_connections:
+            return
             
-        disconnected = []
+        # Clean up closed connections and broadcast to active ones
+        active_connections = []
         for connection in self.active_connections:
             try:
-                await connection.send_text(message)
-            except:
-                disconnected.append(connection)
+                if connection.client_state == WebSocketState.CONNECTED:
+                    await connection.send_json(message)
+                    active_connections.append(connection)
+                else:
+                    self.logger.debug(f"Removing closed WebSocket connection")
+            except ConnectionClosedError:
+                self.logger.debug(f"Connection closed during broadcast")
+            except Exception as e:
+                self.logger.error(f"Error broadcasting to WebSocket: {e}")
         
-        # Clean up disconnected connections
-        for connection in disconnected:
-            self.disconnect(connection)
+        self.active_connections = active_connections
+
+    def add_monitored_address(self, address: str):
+        """Add an address to the monitoring list"""
+        self.monitored_addresses.add(address)
+        self.logger.info(f"Added address {address} to monitoring. Total: {len(self.monitored_addresses)}")
+
+    def remove_monitored_address(self, address: str):
+        """Remove an address from the monitoring list"""
+        self.monitored_addresses.discard(address)
+        self.logger.info(f"Removed address {address} from monitoring. Total: {len(self.monitored_addresses)}")
+
+    def get_monitored_addresses(self) -> Set[str]:
+        """Get the current set of monitored addresses"""
+        return self.monitored_addresses.copy()
 
 manager = ConnectionManager()
 
@@ -234,50 +262,146 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                 logger.info("WebSocket connection no longer active, stopping data stream")
                 break
                 
+            # Pause if no clients are connected to reduce PLC load
+            if not manager.has_active_connections():
+                await asyncio.sleep(1.0)
+                continue
+                
             try:
                 plc = get_plc()
-                status_data = await read_all_plc_status(plc)
                 
-                # Add communication health info
-                status_data["system"]["communication_errors"] = communication_errors
+                # Read custom addresses if any are being monitored
+                custom_data = {}
+                for address in manager.get_monitored_addresses():
+                    try:
+                        custom_data[address] = plc.getMem(address)
+                    except Exception as e:
+                        logger.debug(f"Failed to read custom address {address}: {e}")
+                        custom_data[address] = None
                 
-                await manager.send_personal_message(json.dumps(status_data), websocket)
+                # Collect comprehensive status
+                status_data = {
+                    "timestamp": datetime.now().isoformat(),
+                    "auth": {
+                        "show_password_screen": plc.getMem(Addresses.auth("show_password_screen")),
+                        "proceed_password": plc.getMem(Addresses.auth("proceed_password")),
+                        "back_password": plc.getMem(Addresses.auth("back_password")),
+                        "password_input": plc.getMem(Addresses.auth("password_input")),
+                        "proceed_status": plc.getMem(Addresses.auth("proceed_status")),
+                        "change_password_status": plc.getMem(Addresses.auth("change_password_status")),
+                        "admin_password": plc.getMem(Addresses.auth("admin_password")),
+                        "user_password": plc.getMem(Addresses.auth("user_password"))
+                    },
+                    "language": {
+                        "current_language": plc.getMem(Addresses.language("current_language"))
+                    },
+                    "control_panel": {
+                        "ac_state": plc.getMem(Addresses.control_panel("ac_state")),
+                        "system_shutdown": plc.getMem(Addresses.control_panel("system_shutdown")),
+                        "ceiling_lights_state": plc.getMem(Addresses.control_panel("ceiling_lights_state")),
+                        "reading_lights_state": plc.getMem(Addresses.control_panel("reading_lights_state")),
+                        "door_lights_state": plc.getMem(Addresses.control_panel("door_lights_state")),
+                        "intercom_state": plc.getMem(Addresses.control_panel("intercom_state"))
+                    },
+                    "pressure": {
+                        "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
+                        "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
+                        "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
+                    },
+                    "session": {
+                        "equalise_state": plc.getMem(Addresses.session("equalise_state")),
+                        "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
+                        "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
+                        "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
+                        "running_state": plc.getMem(Addresses.session("running_state")),
+                        "stop_state": plc.getMem(Addresses.session("stop_state")),
+                        "session_ended": plc.getMem(Addresses.session("session_ended")),
+                        "depressurise_confirm": plc.getMem(Addresses.session("depressurise_confirm"))
+                    },
+                    "modes": {
+                        "mode_rest": plc.getMem(Addresses.modes("mode_rest")),
+                        "mode_health": plc.getMem(Addresses.modes("mode_health")),
+                        "mode_professional": plc.getMem(Addresses.modes("mode_professional")),
+                        "mode_custom": plc.getMem(Addresses.modes("mode_custom")),
+                        "mode_o2_100": plc.getMem(Addresses.modes("mode_o2_100")),
+                        "mode_o2_120": plc.getMem(Addresses.modes("mode_o2_120")),
+                        "custom_duration": plc.getMem(Addresses.modes("custom_duration")),
+                        "compression_beginner": plc.getMem(Addresses.modes("compression_beginner")),
+                        "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
+                        "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
+                        "continuous_o2_flag": plc.getMem(Addresses.modes("continuous_o2_flag")),
+                        "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag"))
+                    },
+                    "climate": {
+                        "ac_auto": plc.getMem(Addresses.climate("ac_auto")),
+                        "ac_low": plc.getMem(Addresses.climate("ac_low")),
+                        "ac_mid": plc.getMem(Addresses.climate("ac_mid")),
+                        "ac_high": plc.getMem(Addresses.climate("ac_high")),
+                        "temperature_setpoint": plc.getMem(Addresses.climate("temperature_setpoint")),
+                        "heating_cooling_toggle": plc.getMem(Addresses.climate("heating_cooling_toggle"))
+                    },
+                    "sensors": {
+                        "current_temperature": plc.getMem(Addresses.sensors("current_temperature")),
+                        "current_humidity": plc.getMem(Addresses.sensors("current_humidity")),
+                        "ambient_o2": plc.getMem(Addresses.sensors("ambient_o2")),
+                        "ambient_o2_2": plc.getMem(Addresses.sensors("ambient_o2_2")),
+                        "ambient_o2_check_flag": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))
+                    },
+                    "calibration": {
+                        "pressure_sensor_calibration": plc.getMem(Addresses.calibration("pressure_sensor_calibration")),
+                        "oxygen_sensor_calibration": plc.getMem(Addresses.calibration("oxygen_sensor_calibration"))
+                    },
+                    "manual": {
+                        "manual_mode": plc.getMem(Addresses.manual("manual_mode"))
+                    },
+                    "timers": {
+                        "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
+                        "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min")),
+                        "session_elapsed_time": plc.getMem(Addresses.timers("session_elapsed_time"))
+                    },
+                    "system": {
+                        "plc_connected": plc.plc.get_connected() if hasattr(plc.plc, 'get_connected') else True,
+                        "communication_errors": communication_errors,
+                        "last_update": datetime.now().isoformat()
+                    },
+                    # Include custom address monitoring data
+                    "custom_addresses": custom_data
+                }
                 
-                # Reset error counter on successful read
-                communication_errors = 0
-                
-                # Update frequency: 0.3 seconds for responsive UI updates
-                await asyncio.sleep(0.3)
+                await websocket.send_json(status_data)
+                communication_errors = 0  # Reset error counter on successful read
                 
             except Exception as e:
                 communication_errors += 1
-                logger.error(f"Error in comprehensive status WebSocket: {e}")
+                logger.error(f"WebSocket communication error {communication_errors}: {e}")
                 
-                # Send error status to frontend
+                # Send error status
                 error_data = {
                     "timestamp": datetime.now().isoformat(),
                     "error": str(e),
-                    "system": {
-                        "plc_connected": False,
-                        "communication_errors": communication_errors,
-                        "last_update": datetime.now().isoformat()
-                    }
+                    "communication_errors": communication_errors,
+                    "custom_addresses": {}  # Empty custom data on error
                 }
                 
                 try:
-                    await manager.send_personal_message(json.dumps(error_data), websocket)
+                    await websocket.send_json(error_data)
                 except:
-                    # Connection might be broken, let it get cleaned up
+                    logger.error("Failed to send error data through WebSocket")
                     break
                 
-                # Faster error recovery for responsive UI, max 3 seconds
-                await asyncio.sleep(min(2 ** min(communication_errors, 2), 3))
-                
-    except WebSocketDisconnect:
-        pass  # Normal disconnection
+                # If too many errors, break the connection
+                if communication_errors > 10:
+                    logger.error("Too many communication errors, closing WebSocket")
+                    break
+            
+            await asyncio.sleep(0.3)  # 300ms update rate
+            
+    except ConnectionClosedError:
+        logger.info("WebSocket connection closed by client")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
     finally:
         manager.disconnect(websocket)
-        logger.info(f"WebSocket comprehensive status stream ended. Remaining connections: {manager.get_connection_count()}")
 
 @router.websocket("/ws/critical-status")
 async def websocket_critical_status(websocket: WebSocket):

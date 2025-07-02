@@ -706,8 +706,20 @@ async def toggle_equalise(plc = Depends(get_plc)):
             # Log the event in database if possible
             try:
                 action = "equalise_enabled" if new_state else "equalise_disabled"
-                session_service.log_session_event(action, {"equalise_state": new_state})
-                logger.info(f"Session equalise event logged: {action}")
+                # Get current session ID if available
+                current_session = session_service.get_current_session()
+                if current_session:
+                    session_service.log_session_event(
+                        session_id=current_session["id"],
+                        event_type="state_change",
+                        event_category="session",
+                        event_name=action,
+                        event_description=f"Session equalise state changed to: {new_state}",
+                        event_data={"equalise_state": new_state}
+                    )
+                    logger.info(f"Session equalise event logged: {action}")
+                else:
+                    logger.info("No active session to log equalise event")
             except Exception as db_error:
                 logger.warning(f"Database event logging failed: {db_error}")
             

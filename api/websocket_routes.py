@@ -11,8 +11,6 @@ from typing import List, Dict, Any, Set
 import asyncio
 import json
 from datetime import datetime
-from fastapi import WebSocketState
-from fastapi.websockets import ConnectionClosedError
 
 from .shared import get_plc, logger, Addresses
 
@@ -39,14 +37,12 @@ class ConnectionManager:
 
     def has_active_connections(self) -> bool:
         """Check if there are any active WebSocket connections"""
-        # Clean up any closed connections
-        self.active_connections = [ws for ws in self.active_connections if ws.client_state == WebSocketState.CONNECTED]
+        # Simply return if we have connections - they'll be cleaned up during broadcast
         return len(self.active_connections) > 0
 
     def get_connection_count(self) -> int:
         """Get the current number of active connections"""
-        # Clean up any closed connections
-        self.active_connections = [ws for ws in self.active_connections if ws.client_state == WebSocketState.CONNECTED]
+        # Return current count - connections are cleaned up during broadcast
         return len(self.active_connections)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
@@ -66,15 +62,11 @@ class ConnectionManager:
         active_connections = []
         for connection in self.active_connections:
             try:
-                if connection.client_state == WebSocketState.CONNECTED:
-                    await connection.send_json(message)
-                    active_connections.append(connection)
-                else:
-                    self.logger.debug(f"Removing closed WebSocket connection")
-            except ConnectionClosedError:
-                self.logger.debug(f"Connection closed during broadcast")
+                await connection.send_json(message)
+                active_connections.append(connection)
             except Exception as e:
-                self.logger.error(f"Error broadcasting to WebSocket: {e}")
+                # Connection is closed or has an error, skip it
+                self.logger.debug(f"Removing inactive WebSocket connection: {e}")
         
         self.active_connections = active_connections
 
@@ -396,7 +388,7 @@ async def websocket_comprehensive_status(websocket: WebSocket):
             
             await asyncio.sleep(0.3)  # 300ms update rate
             
-    except ConnectionClosedError:
+    except WebSocketDisconnect:
         logger.info("WebSocket connection closed by client")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")

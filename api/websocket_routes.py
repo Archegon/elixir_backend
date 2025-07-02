@@ -133,15 +133,15 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
             "control_panel": {
                 "ac_state": plc.getMem(Addresses.control("ac_state")),
                 "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
-                "ceiling_lights_state": plc.getMem(Addresses.control("ceiling_light_state")),
-                "reading_lights_state": plc.getMem(Addresses.control("reading_lights")),
-                "door_lights_state": plc.getMem(Addresses.control("door_light")),
+                "ceiling_light_state": plc.getMem(Addresses.control("ceiling_light_state")),
+                "reading_lights": plc.getMem(Addresses.control("reading_lights")),
+                "door_light": plc.getMem(Addresses.control("door_light")),
                 "intercom_state": plc.getMem(Addresses.control("intercom_state"))
             },
             
             # Pressure System Status
             "pressure": {
-                "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
+                "pressure_setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
                 "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
                 "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
             },
@@ -153,7 +153,7 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
                 "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
                 "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
                 "equalise_state": plc.getMem(Addresses.session("equalise_state")),
-                "depressurise_confirm": plc.getMem(Addresses.session("depressurisation_confirm"))
+                "depressurisation_confirm": plc.getMem(Addresses.session("depressurisation_confirm"))
             },
             
             # Operating Modes Status
@@ -164,12 +164,12 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
                 "mode_custom": plc.getMem(Addresses.modes("mode_custom")),
                 "mode_o2_100": plc.getMem(Addresses.modes("mode_o2_100")),
                 "mode_o2_120": plc.getMem(Addresses.modes("mode_o2_120")),
+                "set_duration": plc.getMem(Addresses.modes("set_duration")),
                 "compression_beginner": plc.getMem(Addresses.modes("compression_beginner")),
                 "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
                 "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
                 "continuous_o2_flag": plc.getMem(Addresses.modes("continuous_o2_flag")),
-                "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag")),
-                "custom_duration": plc.getMem(Addresses.modes("set_duration"))
+                "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag"))
             },
             
             # Climate Control Status
@@ -285,18 +285,20 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                         "user_password": plc.getMem(Addresses.auth("user_password"))
                     },
                     "language": {
-                        "current_language": plc.getMem(Addresses.language("current_language"))
+                        "language_switch": plc.getMem(Addresses.language("language_switch")),
+                        "english_active": plc.getMem(Addresses.language("english_active")),
+                        "chinese_active": plc.getMem(Addresses.language("chinese_active"))
                     },
                     "control_panel": {
-                        "ac_state": plc.getMem(Addresses.control_panel("ac_state")),
-                        "system_shutdown": plc.getMem(Addresses.control_panel("system_shutdown")),
-                        "ceiling_lights_state": plc.getMem(Addresses.control_panel("ceiling_lights_state")),
-                        "reading_lights_state": plc.getMem(Addresses.control_panel("reading_lights_state")),
-                        "door_lights_state": plc.getMem(Addresses.control_panel("door_lights_state")),
-                        "intercom_state": plc.getMem(Addresses.control_panel("intercom_state"))
+                        "ac_state": plc.getMem(Addresses.control("ac_state")),
+                        "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
+                        "ceiling_light_state": plc.getMem(Addresses.control("ceiling_light_state")),
+                        "reading_lights": plc.getMem(Addresses.control("reading_lights")),
+                        "door_light": plc.getMem(Addresses.control("door_light")),
+                        "intercom_state": plc.getMem(Addresses.control("intercom_state"))
                     },
                     "pressure": {
-                        "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
+                        "pressure_setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
                         "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
                         "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
                     },
@@ -307,8 +309,7 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                         "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
                         "running_state": plc.getMem(Addresses.session("running_state")),
                         "stop_state": plc.getMem(Addresses.session("stop_state")),
-                        "session_ended": plc.getMem(Addresses.session("session_ended")),
-                        "depressurise_confirm": plc.getMem(Addresses.session("depressurise_confirm"))
+                        "depressurisation_confirm": plc.getMem(Addresses.session("depressurisation_confirm"))
                     },
                     "modes": {
                         "mode_rest": plc.getMem(Addresses.modes("mode_rest")),
@@ -317,7 +318,7 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                         "mode_custom": plc.getMem(Addresses.modes("mode_custom")),
                         "mode_o2_100": plc.getMem(Addresses.modes("mode_o2_100")),
                         "mode_o2_120": plc.getMem(Addresses.modes("mode_o2_120")),
-                        "custom_duration": plc.getMem(Addresses.modes("custom_duration")),
+                        "set_duration": plc.getMem(Addresses.modes("set_duration")),
                         "compression_beginner": plc.getMem(Addresses.modes("compression_beginner")),
                         "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
                         "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
@@ -325,12 +326,12 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                         "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag"))
                     },
                     "climate": {
-                        "ac_auto": plc.getMem(Addresses.climate("ac_auto")),
-                        "ac_low": plc.getMem(Addresses.climate("ac_low")),
-                        "ac_mid": plc.getMem(Addresses.climate("ac_mid")),
-                        "ac_high": plc.getMem(Addresses.climate("ac_high")),
-                        "temperature_setpoint": plc.getMem(Addresses.climate("temperature_setpoint")),
-                        "heating_cooling_toggle": plc.getMem(Addresses.climate("heating_cooling_toggle"))
+                        "ac_auto": plc.getMem(Addresses.temperature("ac_auto")),
+                        "ac_low": plc.getMem(Addresses.temperature("ac_low")),
+                        "ac_mid": plc.getMem(Addresses.temperature("ac_mid")),
+                        "ac_high": plc.getMem(Addresses.temperature("ac_high")),
+                        "temperature_setpoint": plc.getMem(Addresses.temperature("temperature_setpoint")),
+                        "heating_cooling_toggle": plc.getMem(Addresses.temperature("heating_cooling_toggle"))
                     },
                     "sensors": {
                         "current_temperature": plc.getMem(Addresses.sensors("current_temperature")),
@@ -348,8 +349,7 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                     },
                     "timers": {
                         "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
-                        "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min")),
-                        "session_elapsed_time": plc.getMem(Addresses.timers("session_elapsed_time"))
+                        "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min"))
                     },
                     "system": {
                         "plc_connected": plc.plc.get_connected() if hasattr(plc.plc, 'get_connected') else True,

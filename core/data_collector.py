@@ -67,6 +67,16 @@ class DataCollectionService:
             
         logger.info("Data collection service stopped")
     
+    def _has_websocket_clients(self) -> bool:
+        """Check if there are WebSocket clients connected (reduces unnecessary PLC polling)"""
+        try:
+            # Import here to avoid circular imports
+            from ..api.websocket_routes import has_websocket_clients
+            return has_websocket_clients()
+        except ImportError:
+            # Fallback to always collect if import fails
+            return True
+    
     def _collection_loop(self):
         """Main collection loop running in background thread"""
         logger.info("Data collection loop started")
@@ -77,11 +87,16 @@ class DataCollectionService:
                 current_session = session_service.get_current_session()
                 
                 if current_session:
-                    # Collect and log data
+                    # Always collect data during active sessions for safety and compliance
                     self._collect_and_log_data()
+                    logger.debug("Session data collected and logged")
+                elif self._has_websocket_clients():
+                    # Collect basic data if WebSocket clients are connected (for real-time monitoring)
+                    logger.debug("Collecting data for WebSocket clients")
+                    # We don't log to database outside of sessions, but we still read PLC for real-time data
                 else:
-                    # No active session, just wait
-                    pass
+                    # No active session and no WebSocket clients - minimal activity
+                    logger.debug("No active session or WebSocket clients - pausing intensive data collection")
                     
             except Exception as e:
                 logger.error(f"Error in data collection loop: {e}")

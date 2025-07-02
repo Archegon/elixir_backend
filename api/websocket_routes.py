@@ -33,13 +33,26 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
         self.logger.info(f"WebSocket connection closed. Total connections: {len(self.active_connections)}")
 
+    def has_active_connections(self) -> bool:
+        """Check if there are any active WebSocket connections"""
+        return len(self.active_connections) > 0
+
+    def get_connection_count(self) -> int:
+        """Get the number of active connections"""
+        return len(self.active_connections)
+
     async def send_personal_message(self, message: str, websocket: WebSocket):
         try:
             await websocket.send_text(message)
         except Exception as e:
             self.logger.error(f"Failed to send message to WebSocket: {e}")
+            # Remove failed connection
+            self.disconnect(websocket)
 
     async def broadcast(self, message: str):
+        if not self.has_active_connections():
+            return  # No connections to broadcast to
+            
         disconnected = []
         for connection in self.active_connections:
             try:
@@ -52,6 +65,21 @@ class ConnectionManager:
             self.disconnect(connection)
 
 manager = ConnectionManager()
+
+# Global function to check if any WebSocket clients are connected
+def has_websocket_clients() -> bool:
+    """
+    Global function to check if any WebSocket clients are currently connected.
+    This can be used by other services to determine if they should perform
+    data collection operations.
+    """
+    return manager.has_active_connections()
+
+def get_websocket_client_count() -> int:
+    """
+    Global function to get the current number of WebSocket clients.
+    """
+    return manager.get_connection_count()
 
 async def read_all_plc_status(plc) -> Dict[str, Any]:
     """
@@ -201,6 +229,11 @@ async def websocket_comprehensive_status(websocket: WebSocket):
     
     try:
         while True:
+            # Check if this connection is still active
+            if websocket not in manager.active_connections:
+                logger.info("WebSocket connection no longer active, stopping data stream")
+                break
+                
             try:
                 plc = get_plc()
                 status_data = await read_all_plc_status(plc)
@@ -234,13 +267,17 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                 try:
                     await manager.send_personal_message(json.dumps(error_data), websocket)
                 except:
-                    pass  # Connection might be broken
+                    # Connection might be broken, let it get cleaned up
+                    break
                 
                 # Faster error recovery for responsive UI, max 3 seconds
                 await asyncio.sleep(min(2 ** min(communication_errors, 2), 3))
                 
     except WebSocketDisconnect:
+        pass  # Normal disconnection
+    finally:
         manager.disconnect(websocket)
+        logger.info(f"WebSocket comprehensive status stream ended. Remaining connections: {manager.get_connection_count()}")
 
 @router.websocket("/ws/critical-status")
 async def websocket_critical_status(websocket: WebSocket):
@@ -252,6 +289,11 @@ async def websocket_critical_status(websocket: WebSocket):
     
     try:
         while True:
+            # Check if this connection is still active
+            if websocket not in manager.active_connections:
+                logger.info("Critical status WebSocket connection no longer active, stopping data stream")
+                break
+                
             try:
                 plc = get_plc()
                 critical_data = {
@@ -265,7 +307,8 @@ async def websocket_critical_status(websocket: WebSocket):
                         "running_state": plc.getMem(Addresses.session("running_state")),
                         "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
                         "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
-                        "depressurise_state": plc.getMem(Addresses.session("depressurise_state"))
+                        "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
+                        "equalise_state": plc.getMem(Addresses.session("equalise_state"))
                     },
                     "safety": {
                         "ambient_o2": plc.getMem(Addresses.sensors("ambient_o2")),
@@ -288,7 +331,10 @@ async def websocket_critical_status(websocket: WebSocket):
                 await asyncio.sleep(2)
                 
     except WebSocketDisconnect:
+        pass  # Normal disconnection
+    finally:
         manager.disconnect(websocket)
+        logger.info(f"Critical status WebSocket stream ended. Remaining connections: {manager.get_connection_count()}")
 
 # Keep existing specialized endpoints for backward compatibility
 @router.websocket("/ws/live-data")
@@ -297,6 +343,11 @@ async def websocket_live_data(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
+            # Check if this connection is still active
+            if websocket not in manager.active_connections:
+                logger.info("Live data WebSocket connection no longer active, stopping data stream")
+                break
+                
             try:
                 plc = get_plc()
                 live_data = {
@@ -314,7 +365,8 @@ async def websocket_live_data(websocket: WebSocket):
                         "pressuring": plc.getMem(Addresses.session("pressuring_state")),
                         "stabilising": plc.getMem(Addresses.session("stabilising_state")),
                         "depressurising": plc.getMem(Addresses.session("depressurise_state")),
-                        "ac_state": plc.getMem(Addresses.control_panel("ac_state")),
+                        "equalising": plc.getMem(Addresses.session("equalise_state")),
+                        "ac_state": plc.getMem(Addresses.control("ac_state")),
                         "ambient_o2_check": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))
                     },
                     "timers": {
@@ -335,7 +387,10 @@ async def websocket_live_data(websocket: WebSocket):
                 await asyncio.sleep(5)
                 
     except WebSocketDisconnect:
+        pass  # Normal disconnection
+    finally:
         manager.disconnect(websocket)
+        logger.info(f"Live data WebSocket stream ended. Remaining connections: {manager.get_connection_count()}")
 
 @router.websocket("/ws/pressure")
 async def websocket_pressure_data(websocket: WebSocket):
@@ -343,6 +398,11 @@ async def websocket_pressure_data(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
+            # Check if this connection is still active
+            if websocket not in manager.active_connections:
+                logger.info("Pressure WebSocket connection no longer active, stopping data stream")
+                break
+                
             try:
                 plc = get_plc()
                 pressure_data = {
@@ -352,7 +412,8 @@ async def websocket_pressure_data(websocket: WebSocket):
                     "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2")),
                     "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
                     "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
-                    "depressurise_state": plc.getMem(Addresses.session("depressurise_state"))
+                    "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
+                    "equalise_state": plc.getMem(Addresses.session("equalise_state"))
                 }
                 
                 await manager.send_personal_message(json.dumps(pressure_data), websocket)
@@ -363,7 +424,10 @@ async def websocket_pressure_data(websocket: WebSocket):
                 await asyncio.sleep(2)
                 
     except WebSocketDisconnect:
+        pass  # Normal disconnection
+    finally:
         manager.disconnect(websocket)
+        logger.info(f"Pressure WebSocket stream ended. Remaining connections: {manager.get_connection_count()}")
 
 @router.websocket("/ws/sensors")
 async def websocket_sensor_data(websocket: WebSocket):
@@ -371,6 +435,11 @@ async def websocket_sensor_data(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
+            # Check if this connection is still active
+            if websocket not in manager.active_connections:
+                logger.info("Sensors WebSocket connection no longer active, stopping data stream")
+                break
+                
             try:
                 plc = get_plc()
                 sensor_data = {
@@ -390,4 +459,7 @@ async def websocket_sensor_data(websocket: WebSocket):
                 await asyncio.sleep(5)
                 
     except WebSocketDisconnect:
-        manager.disconnect(websocket) 
+        pass  # Normal disconnection
+    finally:
+        manager.disconnect(websocket)
+        logger.info(f"Sensors WebSocket stream ended. Remaining connections: {manager.get_connection_count()}") 

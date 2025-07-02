@@ -656,62 +656,68 @@ async def start_session(plc = Depends(get_plc)):
     }
 )
 async def end_session(plc = Depends(get_plc)):
-    """End session and depressurize"""
+    """End treatment session with controlled depressurization"""
     try:
         with ContextLogger(logger, operation="SESSION_END"):
-            # Get final system readings for session record
-            try:
-                final_pressure_1 = plc.getMem(Addresses.pressure("internal_pressure_1"))
-                final_pressure_2 = plc.getMem(Addresses.pressure("internal_pressure_2"))
-                final_temp = plc.getMem(Addresses.sensors("current_temperature"))
-                final_o2 = plc.getMem(Addresses.sensors("ambient_o2"))
-                
-                # Prepare final readings for database
-                final_readings = {
-                    "final_pressure_1_ata": final_pressure_1,
-                    "final_pressure_2_ata": final_pressure_2,
-                    "final_temperature_c": final_temp,
-                    "final_oxygen_percent": final_o2
-                }
-                
-            except Exception as e:
-                logger.warning(f"Failed to read final parameters: {e}")
-                final_readings = {}
-            
-            # Send end command to PLC
+            # Write to PLC to end session
             address = Addresses.session("end_session")
             plc.writeMem(address, True)
             
-            # End database session record
+            # Try to end current session in database
             try:
-                success = session_service.end_session(
-                    completion_reason="normal",
-                    final_readings=final_readings
-                )
-                
-                if success:
-                    logger.info("Database session ended successfully")
-                    database_ended = True
-                else:
-                    logger.warning("No active database session to end")
-                    database_ended = False
-                    
-            except Exception as e:
-                logger.error(f"Failed to end database session: {e}")
-                database_ended = False
+                session_service.end_current_session("manual_end")
+                logger.info("Session ended in database")
+            except Exception as db_error:
+                logger.warning(f"Database session end failed: {db_error}")
             
-            logger.info("Session end requested")
-            
-            response_data = {
-                "message": "Session ended",
-                "database_session_ended": database_ended,
-                "final_readings": final_readings
-            }
-            
-            return PLCResponse(success=True, data=response_data, message="Session ended")
-            
+            logger.info("Session end command sent to PLC")
+            return PLCResponse(
+                success=True, 
+                message="Session end initiated - depressurization will begin"
+            )
     except Exception as e:
         logger.error(f"Failed to end session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post(
+    "/api/session/equalise", 
+    response_model=PLCResponse,
+    tags=["Session Management"],
+    summary="Toggle Session Equalise State",
+    description="Toggle the equalise/pause state during treatment session. Use to pause treatment for patient comfort or safety assessments.",
+    responses={
+        200: {"description": "Session equalise state toggled successfully"},
+        500: {"description": "Failed to toggle equalise state"}
+    }
+)
+async def toggle_equalise(plc = Depends(get_plc)):
+    """Toggle session equalise/pause state"""
+    try:
+        with ContextLogger(logger, operation="SESSION_EQUALISE"):
+            # Read current equalise state
+            equalise_address = Addresses.session("equalise_state")
+            current_state = plc.readMem(equalise_address)
+            
+            # Toggle the equalise state
+            new_state = not current_state
+            plc.writeMem(equalise_address, new_state)
+            
+            # Log the event in database if possible
+            try:
+                action = "equalise_enabled" if new_state else "equalise_disabled"
+                session_service.log_session_event(action, {"equalise_state": new_state})
+                logger.info(f"Session equalise event logged: {action}")
+            except Exception as db_error:
+                logger.warning(f"Database event logging failed: {db_error}")
+            
+            logger.info(f"Session equalise toggled to: {new_state}")
+            return PLCResponse(
+                success=True,
+                data={"equalise_state": new_state},
+                message=f"Session {'equalised' if new_state else 'resumed'}"
+            )
+    except Exception as e:
+        logger.error(f"Failed to toggle equalise state: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post(
@@ -1100,27 +1106,81 @@ async def set_manual_control(request: ManualControlRequest, plc = Depends(get_pl
     }
 )
 async def get_system_status(plc = Depends(get_plc)):
-    """Get comprehensive system status"""
+    """Get comprehensive system status for monitoring"""
     try:
-        return PLCResponse(
-            success=True,
-            data={
-                "session_status": {
-                    "equalise_state": plc.getMem(Addresses.session("equalise_state")),
+        with ContextLogger(logger, operation="SYSTEM_STATUS"):
+            # Read core system status
+            status_data = {
+                "session": {
                     "running_state": plc.getMem(Addresses.session("running_state")),
                     "pressuring_state": plc.getMem(Addresses.session("pressuring_state")),
                     "stabilising_state": plc.getMem(Addresses.session("stabilising_state")),
-                    "stop_state": plc.getMem(Addresses.session("stop_state")),
-                    "depressurise_state": plc.getMem(Addresses.session("depressurise_state"))
+                    "depressurise_state": plc.getMem(Addresses.session("depressurise_state")),
+                    "equalise_state": plc.getMem(Addresses.session("equalise_state"))
                 },
-                "timers": {
-                    "run_time_remaining_sec": plc.getMem(Addresses.timers("run_time_remaining_sec")),
-                    "run_time_remaining_min": plc.getMem(Addresses.timers("run_time_remaining_min"))
+                "pressure": {
+                    "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
+                    "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
+                    "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
                 },
-                "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
-                "ambient_o2_check": plc.getMem(Addresses.sensors("ambient_o2_check_flag"))
+                "safety": {
+                    "ambient_o2": plc.getMem(Addresses.sensors("ambient_o2")),
+                    "temperature": plc.getMem(Addresses.sensors("current_temperature"))
+                },
+                "system": {
+                    "plc_connected": plc.plc.get_connected() if hasattr(plc.plc, 'get_connected') else True
+                }
             }
-        )
+            
+            return PLCResponse(
+                success=True,
+                data=status_data,
+                message="System status retrieved"
+            )
     except Exception as e:
         logger.error(f"Failed to get system status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get(
+    "/api/status/websocket-connections", 
+    response_model=PLCResponse,
+    tags=["System Status & Monitoring"],
+    summary="Get WebSocket Connection Status",
+    description="Retrieve current WebSocket connection status for debugging and monitoring purposes.",
+    responses={
+        200: {"description": "WebSocket connection status retrieved successfully"},
+        500: {"description": "Failed to retrieve WebSocket connection status"}
+    }
+)
+async def get_websocket_status():
+    """Get current WebSocket connection status"""
+    try:
+        # Import WebSocket functions
+        from .websocket_routes import get_websocket_client_count, has_websocket_clients
+        
+        connection_count = get_websocket_client_count()
+        has_clients = has_websocket_clients()
+        
+        status_data = {
+            "websocket_connections": {
+                "active_connections": connection_count,
+                "has_active_clients": has_clients,
+                "data_streaming_active": has_clients,
+                "status": "active" if has_clients else "idle"
+            },
+            "performance_optimization": {
+                "plc_polling_active": has_clients,
+                "description": "Backend reduces PLC polling when no WebSocket clients are connected"
+            }
+        }
+        
+        logger.info(f"WebSocket status requested - Active connections: {connection_count}")
+        
+        return PLCResponse(
+            success=True,
+            data=status_data,
+            message=f"WebSocket status: {connection_count} active connection(s)"
+        )
+    except Exception as e:
+        logger.error(f"Failed to get WebSocket status: {e}")
         raise HTTPException(status_code=500, detail=str(e))

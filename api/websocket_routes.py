@@ -170,7 +170,9 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
                 "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
                 "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
                 "continuous_o2_flag": plc.getMem(Addresses.modes("continuous_o2_flag")),
-                "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag"))
+                "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag")),
+                "continuous_o2_selection": plc.getMem(Addresses.modes("continuous_o2_selection")),
+                "intermittent_o2_selection": plc.getMem(Addresses.modes("intermittent_o2_selection"))
             },
             
             # Climate Control Status
@@ -325,7 +327,9 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                         "compression_normal": plc.getMem(Addresses.modes("compression_normal")),
                         "compression_fast": plc.getMem(Addresses.modes("compression_fast")),
                         "continuous_o2_flag": plc.getMem(Addresses.modes("continuous_o2_flag")),
-                        "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag"))
+                        "intermittent_o2_flag": plc.getMem(Addresses.modes("intermittent_o2_flag")),
+                        "continuous_o2_selection": plc.getMem(Addresses.modes("continuous_o2_selection")),
+                        "intermittent_o2_selection": plc.getMem(Addresses.modes("intermittent_o2_selection"))
                     },
                     "climate": {
                         "ac_auto": plc.getMem(Addresses.temperature("ac_auto")),

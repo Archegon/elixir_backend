@@ -182,6 +182,14 @@
       "address": "M15.0",
       "comment": "Intermittent O2 delivery flag"
     },
+    "continuous_o2_selection": {
+      "address": "M20.0",
+      "comment": "Selection for continuous oxygen flow"
+    },
+    "intermittent_o2_selection": {
+      "address": "M20.1",
+      "comment": "Selection for intermittent oxygen flow"
+    },
     "set_duration": {
       "address": "VD682",
       "comment": "Sets duration of session (60 to 120 mins)"

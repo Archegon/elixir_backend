@@ -852,9 +852,13 @@ async def set_oxygen_mode(mode: str, plc = Depends(get_plc)):
             if mode == "continuous":
                 plc.writeMem(Addresses.modes("continuous_o2_flag"), True)
                 plc.writeMem(Addresses.modes("intermittent_o2_flag"), False)
+                plc.writeMem(Addresses.modes("continuous_o2_selection"), True)
+                plc.writeMem(Addresses.modes("intermittent_o2_selection"), False)
             elif mode == "intermittent":
                 plc.writeMem(Addresses.modes("intermittent_o2_flag"), True)
                 plc.writeMem(Addresses.modes("continuous_o2_flag"), False)
+                plc.writeMem(Addresses.modes("intermittent_o2_selection"), True)
+                plc.writeMem(Addresses.modes("continuous_o2_selection"), False)
             else:
                 raise HTTPException(status_code=400, detail="Invalid oxygen mode")
             

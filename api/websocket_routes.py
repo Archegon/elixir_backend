@@ -133,14 +133,15 @@ async def read_all_plc_status(plc) -> Dict[str, Any]:
             "control_panel": {
                 "ac_state": plc.getMem(Addresses.control("ac_state")),
                 "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
-                "ceiling_light_state": plc.getMem(Addresses.control("ceiling_light_state")),
-                "reading_lights": plc.getMem(Addresses.control("reading_lights")),
-                "door_light": plc.getMem(Addresses.control("door_light")),
+                "ceiling_lights_state": plc.getMem(Addresses.control("ceiling_light_state")),
+                "reading_lights_state": plc.getMem(Addresses.control("reading_lights")),
+                "door_lights_state": plc.getMem(Addresses.control("door_light")),
                 "intercom_state": plc.getMem(Addresses.control("intercom_state"))
             },
             
             # Pressure System Status
             "pressure": {
+                "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
                 "pressure_setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
                 "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
                 "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))
@@ -292,12 +293,13 @@ async def websocket_comprehensive_status(websocket: WebSocket):
                     "control_panel": {
                         "ac_state": plc.getMem(Addresses.control("ac_state")),
                         "shutdown_status": plc.getMem(Addresses.control("shutdown_status")),
-                        "ceiling_light_state": plc.getMem(Addresses.control("ceiling_light_state")),
-                        "reading_lights": plc.getMem(Addresses.control("reading_lights")),
-                        "door_light": plc.getMem(Addresses.control("door_light")),
+                        "ceiling_lights_state": plc.getMem(Addresses.control("ceiling_light_state")),
+                        "reading_lights_state": plc.getMem(Addresses.control("reading_lights")),
+                        "door_lights_state": plc.getMem(Addresses.control("door_light")),
                         "intercom_state": plc.getMem(Addresses.control("intercom_state"))
                     },
                     "pressure": {
+                        "setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
                         "pressure_setpoint": plc.getMem(Addresses.pressure("pressure_setpoint")),
                         "internal_pressure_1": plc.getMem(Addresses.pressure("internal_pressure_1")),
                         "internal_pressure_2": plc.getMem(Addresses.pressure("internal_pressure_2"))

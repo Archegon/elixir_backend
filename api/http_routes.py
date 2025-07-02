@@ -1253,8 +1253,8 @@ async def write_custom_plc_address(address: str, request: CustomWriteRequest, pl
             except:
                 old_value = "unknown"
             
-            # Write the new value - use setMem to match the rest of the codebase
-            plc.setMem(address, request.value)
+            # Write the new value - use writeMem to match the rest of the codebase
+            plc.writeMem(address, request.value)
             
             # Verify the write by reading back
             try:

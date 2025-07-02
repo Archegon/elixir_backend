@@ -12,6 +12,7 @@ All routes send simple commands to the PLC and let the PLC handle the actual log
 """
 
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 
 from .shared import (
     get_plc, logger, Addresses, get_plc_config, reload_config, ContextLogger,
@@ -1183,4 +1184,95 @@ async def get_websocket_status():
         )
     except Exception as e:
         logger.error(f"Failed to get WebSocket status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === CUSTOM PLC ADDRESS MONITORING ===
+@router.get(
+    "/api/plc/read/{address}",
+    response_model=PLCResponse,
+    tags=["Development & Debugging"],
+    summary="Read Custom PLC Address",
+    description="Read a value from a custom PLC memory address for development and debugging purposes.",
+    responses={
+        200: {"description": "PLC address read successfully"},
+        400: {"description": "Invalid address format"},
+        500: {"description": "Failed to read PLC address"}
+    }
+)
+async def read_custom_plc_address(address: str, plc = Depends(get_plc)):
+    """Read value from a custom PLC address"""
+    try:
+        with ContextLogger(logger, operation="CUSTOM_READ", address=address):
+            # Validate address format (basic validation)
+            if not address or len(address) < 2:
+                raise HTTPException(status_code=400, detail="Invalid address format")
+            
+            # Read the address
+            value = plc.readMem(address)
+            
+            logger.info(f"Read custom address {address}: {value}")
+            return PLCResponse(
+                success=True,
+                data={
+                    "address": address,
+                    "value": value,
+                    "type": type(value).__name__
+                },
+                message=f"Address {address} read successfully"
+            )
+    except Exception as e:
+        logger.error(f"Failed to read custom address {address}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CustomWriteRequest(BaseModel):
+    value: float | int | bool
+
+@router.post(
+    "/api/plc/write/{address}",
+    response_model=PLCResponse,
+    tags=["Development & Debugging"],
+    summary="Write to Custom PLC Address",
+    description="⚠️ WARNING: Write a value to a custom PLC memory address. Use with extreme caution in development only.",
+    responses={
+        200: {"description": "PLC address written successfully"},
+        400: {"description": "Invalid address format or value"},
+        500: {"description": "Failed to write to PLC address"}
+    }
+)
+async def write_custom_plc_address(address: str, request: CustomWriteRequest, plc = Depends(get_plc)):
+    """Write value to a custom PLC address"""
+    try:
+        with ContextLogger(logger, operation="CUSTOM_WRITE", address=address, value=request.value):
+            # Validate address format (basic validation)
+            if not address or len(address) < 2:
+                raise HTTPException(status_code=400, detail="Invalid address format")
+            
+            # Read current value for logging
+            try:
+                old_value = plc.readMem(address)
+            except:
+                old_value = "unknown"
+            
+            # Write the new value
+            plc.writeMem(address, request.value)
+            
+            # Verify the write by reading back
+            try:
+                new_value = plc.readMem(address)
+            except:
+                new_value = "unknown"
+            
+            logger.warning(f"Custom write to {address}: {old_value} → {request.value} (verified: {new_value})")
+            return PLCResponse(
+                success=True,
+                data={
+                    "address": address,
+                    "old_value": old_value,
+                    "written_value": request.value,
+                    "verified_value": new_value
+                },
+                message=f"Address {address} written successfully"
+            )
+    except Exception as e:
+        logger.error(f"Failed to write custom address {address}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
